@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="Look" />
+
+    <ListPreference
+        app:key="theme"
+        app:title="Theme"
+        app:dialogTitle="Pick theme"
+        app:entries="@array/theme_names"
+        app:entryValues="@array/theme_values"
+        app:defaultValue="system"
+        app:useSimpleSummaryProvider="true" />
+
+    <ListPreference
+        app:key="code_size"
+        app:title="Text size"
+        app:dialogTitle="Pick text size"
+        app:entries="@array/code_size_names"
+        app:entryValues="@array/code_size_values"
+        app:defaultValue="normal"
+        app:useSimpleSummaryProvider="true" />
+
+    <PreferenceCategory app:title="Code view" />
+
+    <SwitchPreferenceCompat
+        app:key="line_numbers"
+        app:title="Line numbers"
+        app:summary="Show line numbers"
+        app:defaultValue="true" />
+
+    <SwitchPreferenceCompat
+        app:key="word_wrap"
+        app:title="Word wrap"
+        app:summary="Wrap long lines"
+        app:defaultValue="true" />
+
+    <SwitchPreferenceCompat
+        app:key="show_hidden"
+        app:title="Show hidden files"
+        app:summary="Show all files and folders"
+        app:defaultValue="false" />
+
+    <PreferenceCategory app:title="Save and open" />
+
+    <ListPreference
+        app:defaultValue="app"
+        app:dialogTitle="Save project to..."
+        app:entries="@array/save_to_names"
+        app:entryValues="@array/save_to_values"
+        app:key="save_to"
+        app:title="Save projects to.."
+        app:useSimpleSummaryProvider="true" />
+
+    <ListPreference
+        app:key="show_first"
+        app:title="Show first"
+        app:dialogTitle="Pick start page"
+        app:entries="@array/show_first_names"
+        app:entryValues="@array/show_first_values"
+        app:defaultValue="recent"
+        app:useSimpleSummaryProvider="true" />
+
+    <SwitchPreferenceCompat
+        app:defaultValue="true"
+        app:key="remember_last"
+        app:summary="Open last file on start"
+        app:title="Remember open files" />
+
+    <Preference
+        app:key="clear_cache"
+        app:summary="Delete cache files"
+        app:title="Clear cache" />
+
+    <PreferenceCategory app:title="Updates" />
+
+    <SwitchPreferenceCompat
+        app:defaultValue="true"
+        app:key="check_update"
+        app:summary="Notify me of new updates"
+        app:title="Check for updates" />
+
+    <SwitchPreferenceCompat
+        app:defaultValue="true"
+        app:key="notifications"
+        app:summary="Notify when work is done"
+        app:title="Notifications" />
+
+    <PreferenceCategory app:title="About" />
+
+    <Preference
+        app:key="about"
+        app:title="About DexWorks"
+        app:summary="Version 1.0" />
+    <Preference
+        app:key="feedback"
+        app:title="Send feedback"
+        app:summary="Report a problem or ask for help" />
+</PreferenceScreen>

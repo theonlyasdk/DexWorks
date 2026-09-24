@@ -1,0 +1,209 @@
+<resources>
+    <string name="app_name">DexWorks</string>
+    <string name="action_settings">Settings</string>
+    <!-- Navigation titles -->
+    <string name="title_browse">Browse</string>
+    <string name="title_projects">Projects</string>
+    <string name="title_tools">Tools</string>
+    <string name="not_yet_implemented">Not yet implemented</string>
+
+    <!-- Browse tab -->
+    <string name="search_placeholder">Search apps and APKs…</string>
+    <string name="cd_alphabet_index">Fast scroll</string>
+    <string name="sample_app_1_name">Calculator Pro</string>
+    <string name="sample_app_1_package">com.example.calculator</string>
+    <string name="sample_app_1_details">v2.4.1 • 14.2 MB</string>
+    <string name="sample_app_2_name">FileManager Plus</string>
+    <string name="sample_app_2_package">com.example.filemanager</string>
+    <string name="sample_app_2_details">v1.1.0 • 8.7 MB</string>
+    <string name="sample_app_3_name">Pixel Arcade</string>
+    <string name="sample_app_3_package">com.example.pixelarcade</string>
+    <string name="sample_app_3_details">v3.0.2 • 45.1 MB</string>
+    <string name="sample_app_4_name">Audio Streamer</string>
+    <string name="sample_app_4_package">com.example.audiostreamer</string>
+    <string name="sample_app_4_details">v1.8.5 • 22.0 MB</string>
+    <string name="sample_app_5_name">Web Navigator</string>
+    <string name="sample_app_5_package">com.example.webnav</string>
+    <string name="sample_app_5_details">v4.1.0 • 18.9 MB</string>
+    <string name="sample_app_6_name">Notes &amp; Tasks</string>
+    <string name="sample_app_6_package">com.example.notes</string>
+    <string name="sample_app_6_details">v2.0.0 • 6.4 MB</string>
+
+    <!-- Projects tab -->
+    <string name="projects_empty_title">No Projects</string>
+    <string name="projects_empty_subtitle">Decompiled APKs and saved workspaces will appear here</string>
+    <string name="action_open_file">Import APK…</string>
+    <string name="cd_add_project">Create project</string>
+    <string name="project_1_name">DexWorks.apk</string>
+    <string name="project_1_date">Modified 2 hours ago</string>
+    <string name="project_1_path">/storage/emulated/0/DexWorks/projects/DexWorks</string>
+    <string name="project_2_name">InjectedPayload.apk</string>
+    <string name="project_2_date">Modified yesterday</string>
+    <string name="project_2_path">/storage/emulated/0/DexWorks/projects/InjectedPayload</string>
+    <string name="project_3_name">SecurityPatchTest.apk</string>
+    <string name="project_3_date">Modified Sep 18, 2026</string>
+    <string name="project_3_path">/storage/emulated/0/DexWorks/projects/SecurityPatchTest</string>
+
+    <!-- Tools tab -->
+    <string name="tool_decompiler_name">Decompiler</string>
+    <string name="tool_decompiler_desc">Decompile DEX bytecode into readable Java/Kotlin source</string>
+    <string name="tool_disassembler_name">Disassembler</string>
+    <string name="tool_disassembler_desc">Disassemble DEX into Smali assembly representation</string>
+    <string name="tool_extractor_name">APK Extractor</string>
+    <string name="tool_extractor_desc">Extract installed APK files and assets to storage</string>
+    <string name="tool_manifest_name">Manifest Viewer</string>
+    <string name="tool_manifest_desc">Decode and inspect binary AndroidManifest.xml</string>
+
+    <!-- App Detail and APK Browsing -->
+    <string name="title_app_detail">App Details</string>
+    <string name="action_show_system_apps">Show system apps</string>
+    <string name="filter_all">All (%d)</string>
+    <string name="filter_user">User (%d)</string>
+    <string name="filter_system">System (%d)</string>
+    <string name="action_pick_apk">Open APK File</string>
+    <string name="action_open_app">Open</string>
+    <string name="action_app_info">System Info</string>
+    <string name="action_copy_apk_path">Copy APK path</string>
+    <string name="action_copy_signature">Copy signature</string>
+    <string name="action_extract_apk">Share APK</string>
+    <string name="badge_system_app">System App</string>
+    <string name="badge_user_app">User App</string>
+    <string name="badge_external_apk">External APK</string>
+    <string name="label_package_name">Package Name</string>
+    <string name="label_version">Version</string>
+    <string name="label_version_code">Version Code</string>
+    <string name="label_sdk_levels">SDK Requirements</string>
+    <string name="label_min_sdk">Min SDK</string>
+    <string name="label_target_sdk">Target SDK</string>
+    <string name="label_apk_size">APK Size</string>
+    <string name="label_apk_path">APK File Path</string>
+    <string name="label_install_date">First Installed</string>
+    <string name="label_update_date">Last Updated</string>
+    <string name="label_install_source">Installation Source</string>
+    <string name="label_components">Components</string>
+    <string name="label_activities">Activities</string>
+    <string name="label_services">Services</string>
+    <string name="label_receivers">Receivers</string>
+    <string name="label_providers">Providers</string>
+    <string name="label_permissions">Permissions (%d)</string>
+    <string name="label_signatures">Signatures / Certificate</string>
+    <string name="label_cert_sha256">SHA-256 Fingerprint</string>
+    <string name="empty_apps_title">No results found</string>
+    <string name="empty_apps_subtitle">No apps matched your search</string>
+    <string name="loading_apps">Loading applications…</string>
+    <string name="loading_apps_progress">Loading applications (%1$d / %2$d)…</string>
+    <string name="toast_path_copied">Path copied to clipboard</string>
+    <string name="toast_copied_to_clipboard">Copied to clipboard</string>
+    <string name="toast_app_not_launchable">This application cannot be launched directly</string>
+    <string name="toast_apk_parse_error">Failed to parse selected APK file</string>
+    <string name="error_detail_title">Could not load app info</string>
+    <string name="error_detail_subtitle">The package could not be read</string>
+    <string name="dialog_sdk_title">Android version</string>
+    <string name="dialog_sdk_message">Version: %1$s\nName: %2$s\nCodename: %3$s</string>
+    <string name="action_save_apk_to">Save APK to…</string>
+    <string name="dialog_remember_location_title">Remember this location?</string>
+    <string name="dialog_remember_location_message">Do you want DexWorks to remember this directory as your default APK export location?</string>
+    <string name="action_remember">Remember</string>
+    <string name="action_not_now">Not now</string>
+    <string name="toast_apk_saved">APK saved successfully</string>
+    <string name="toast_apk_save_failed">Failed to save APK</string>
+    <string name="perm_notif_rationale">Notifications tell you when saving is done</string>
+    <string name="action_retry">Try again</string>
+    <string name="notif_off_title">Notifications off</string>
+    <string name="notif_off_message">Turn them on to know when saving is done</string>
+    <string name="action_open_settings">Open settings</string>
+    <string name="toast_icon_saved">App icon saved</string>
+    <string name="toast_icon_save_failed">Failed to save app icon</string>
+    <string name="empty_permissions">No permissions requested by this application</string>
+    <string name="empty_components">No exported components found</string>
+    <string name="empty_signatures">No signing certificates found</string>
+    <string name="action_inspect_manifest">Inspect manifest</string>
+    <string name="title_manifest_inspector">Manifest Inspector</string>
+    <string name="toast_manifest_copied">Manifest copied to clipboard</string>
+    <string name="action_save_manifest">Save</string>
+    <string name="toast_manifest_saved">Manifest XML saved</string>
+    <string name="toast_manifest_save_failed">Failed to save manifest XML</string>
+    <string name="action_copy_manifest">Copy all</string>
+    <string name="action_copy_range">Copy line range…</string>
+    <string name="dialog_copy_range_title">Copy line range</string>
+    <string name="label_from_line">Start line (1–%d)</string>
+    <string name="label_to_line">End line (1–%d)</string>
+    <string name="error_invalid_range">Please enter a valid line range</string>
+    <string name="toast_lines_copied">Selected lines copied to clipboard</string>
+    <string name="action_share_manifest">Share</string>
+    <string name="error_loading_manifest">Failed to decode AndroidManifest.xml</string>
+    <string name="loading_manifest">Decoding manifest…</string>
+    <string name="action_inspect_activities">Inspect activities</string>
+    <string name="title_activity_inspector">Activity Inspector</string>
+    <string name="badge_exported">Exported</string>
+    <string name="badge_not_exported">Not Exported</string>
+    <string name="badge_alias">Alias</string>
+    <string name="badge_launcher">Launcher</string>
+    <string name="action_launch_activity">Launch</string>
+    <string name="toast_activity_launch_success">Activity launched</string>
+    <string name="toast_activity_launch_failed">Failed to launch activity</string>
+    <string name="empty_activities_title">No activities found</string>
+    <string name="empty_activities_subtitle">No activity components declared</string>
+    <string name="error_activities_title">Could not load activities</string>
+    <string name="error_activities_subtitle">The manifest could not be read</string>
+    <string name="search_activities_hint">Search activities…</string>
+    <string name="filter_activities_all">All</string>
+    <string name="filter_has_intent_filters">Has intent filters</string>
+    <string name="label_launch_mode">Launch Mode: %s</string>
+    <string name="label_permission_required">Requires: %s</string>
+    <string name="label_target_activity">Target: %s</string>
+    <string name="label_intent_filters">Intent Filters</string>
+    <string name="action_close_selection">Close selection</string>
+    <string name="selection_count">%d selected</string>
+    <string name="action_select_all">Select all</string>
+    <string name="action_deselect_all">Deselect all</string>
+    <string name="action_zip_and_save">Zip &amp; Save</string>
+    <string name="toast_saving_zip">Compressing and saving APKs…</string>
+    <string name="toast_zip_saved">APKs zipped and saved successfully</string>
+    <string name="dialog_compressing_progress">Compressing %1$d of %2$d (%3$s)…</string>
+    <string name="notif_channel_work">Work updates</string>
+    <string name="notif_channel_work_desc">Tells you when saving or zipping is done</string>
+    <string name="notif_zip_done_title">APKs saved</string>
+    <string name="notif_zip_done_text">%1$s saved</string>
+    <string name="notif_zip_failed_title">Save failed</string>
+    <string name="notif_zip_failed_text">Could not save the zip file</string>
+    <string name="notif_zip_progress_title">Zipping %1$s</string>
+
+
+    <string name="lorem_ipsum">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
+        volutpat, dolor id interdum ullamcorper, risus dolor egestas lectus, sit amet mattis purus
+        dui nec risus. Maecenas non sodales nisi, vel dictum dolor. Class aptent taciti sociosqu ad
+        litora torquent per conubia nostra, per inceptos himenaeos. Suspendisse blandit eleifend
+        diam, vel rutrum tellus vulputate quis. Aliquam eget libero aliquet, imperdiet nisl a,
+        ornare ex. Sed rhoncus est ut libero porta lobortis. Fusce in dictum tellus.\n\n
+        Suspendisse interdum ornare ante. Aliquam nec cursus lorem. Morbi id magna felis. Vivamus
+        egestas, est a condimentum egestas, turpis nisl iaculis ipsum, in dictum tellus dolor sed
+        neque. Morbi tellus erat, dapibus ut sem a, iaculis tincidunt dui. Interdum et malesuada
+        fames ac ante ipsum primis in faucibus. Curabitur et eros porttitor, ultricies urna vitae,
+        molestie nibh. Phasellus at commodo eros, non aliquet metus. Sed maximus nisl nec dolor
+        bibendum, vel congue leo egestas.\n\n
+        Sed interdum tortor nibh, in sagittis risus mollis quis. Curabitur mi odio, condimentum sit
+        amet auctor at, mollis non turpis. Nullam pretium libero vestibulum, finibus orci vel,
+        molestie quam. Fusce blandit tincidunt nulla, quis sollicitudin libero facilisis et. Integer
+        interdum nunc ligula, et fermentum metus hendrerit id. Vestibulum lectus felis, dictum at
+        lacinia sit amet, tristique id quam. Cras eu consequat dui. Suspendisse sodales nunc ligula,
+        in lobortis sem porta sed. Integer id ultrices magna, in luctus elit. Sed a pellentesque
+        est.\n\n
+        Aenean nunc velit, lacinia sed dolor sed, ultrices viverra nulla. Etiam a venenatis nibh.
+        Morbi laoreet, tortor sed facilisis varius, nibh orci rhoncus nulla, id elementum leo dui
+        non lorem. Nam mollis ipsum quis auctor varius. Quisque elementum eu libero sed commodo. In
+        eros nisl, imperdiet vel imperdiet et, scelerisque a mauris. Pellentesque varius ex nunc,
+        quis imperdiet eros placerat ac. Duis finibus orci et est auctor tincidunt. Sed non viverra
+        ipsum. Nunc quis augue egestas, cursus lorem at, molestie sem. Morbi a consectetur ipsum, a
+        placerat diam. Etiam vulputate dignissim convallis. Integer faucibus mauris sit amet finibus
+        convallis.\n\n
+        Phasellus in aliquet mi. Pellentesque habitant morbi tristique senectus et netus et
+        malesuada fames ac turpis egestas. In volutpat arcu ut felis sagittis, in finibus massa
+        gravida. Pellentesque id tellus orci. Integer dictum, lorem sed efficitur ullamcorper,
+        libero justo consectetur ipsum, in mollis nisl ex sed nisl. Donec maximus ullamcorper
+        sodales. Praesent bibendum rhoncus tellus nec feugiat. In a ornare nulla. Donec rhoncus
+        libero vel nunc consequat, quis tincidunt nisl eleifend. Cras bibendum enim a justo luctus
+        vestibulum. Fusce dictum libero quis erat maximus, vitae volutpat diam dignissim.
+    </string>
+</resources>

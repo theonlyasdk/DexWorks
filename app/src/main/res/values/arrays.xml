@@ -1,0 +1,45 @@
+<resources>
+    <string-array name="theme_names">
+        <item>System</item>
+        <item>Light</item>
+        <item>Dark</item>
+    </string-array>
+    <string-array name="theme_values">
+        <item>system</item>
+        <item>light</item>
+        <item>dark</item>
+    </string-array>
+
+    <string-array name="code_size_names">
+        <item>Small</item>
+        <item>Normal</item>
+        <item>Large</item>
+    </string-array>
+    <string-array name="code_size_values">
+        <item>small</item>
+        <item>normal</item>
+        <item>large</item>
+    </string-array>
+
+    <string-array name="save_to_names">
+        <item>App folder</item>
+        <item>Download folder</item>
+        <item>Ask each time</item>
+    </string-array>
+    <string-array name="save_to_values">
+        <item>app</item>
+        <item>download</item>
+        <item>ask</item>
+    </string-array>
+
+    <string-array name="show_first_names">
+        <item>Recent files</item>
+        <item>Installed apps</item>
+        <item>File picker</item>
+    </string-array>
+    <string-array name="show_first_values">
+        <item>recent</item>
+        <item>apps</item>
+        <item>picker</item>
+    </string-array>
+</resources>

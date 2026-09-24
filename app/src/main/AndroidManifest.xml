@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- we ignore a lot of warnings here wth tools:ignore as android nowadays tend to be more pedantic about
+         specific permissions that read potentially sensitive information from the user's device.
+         but oh well, we're making a decompiler app so we need those permissions anyway. -->
+
+    <!-- Basic Internet access for updates or external symbol lookups -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Required to list all installed applications on the device for analysis (API 30+) -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="PackageVisibilityPolicy,QueryAllPackagesPermission" />
+
+    <!-- Required to read APK files and write decompiled sourcecode to storage -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="AllFilesAccessPolicy,ScopedStorage" />
+
+    <!-- Required to show a notification when saving or zipping is done (API 33+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:name=".MyApplication"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.DexWorks">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.DexWorks"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".PreferenceActivity"
+            android:exported="true"
+            android:theme="@style/Theme.DexWorks"
+            android:windowSoftInputMode="adjustResize">
+        </activity>
+
+        <activity
+            android:name=".AppDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DexWorks"
+            android:windowSoftInputMode="adjustResize">
+        </activity>
+
+        <activity
+            android:name=".ManifestInspectorActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DexWorks"
+            android:windowSoftInputMode="adjustResize">
+        </activity>
+
+        <activity
+            android:name=".ActivityInspectorActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DexWorks"
+            android:windowSoftInputMode="adjustResize">
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+    </application>
+
+</manifest>

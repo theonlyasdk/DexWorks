@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_save_manifest"
+        android:title="@string/action_save_manifest"
+        android:icon="@android:drawable/ic_menu_save"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_share_manifest"
+        android:title="@string/action_share_manifest"
+        android:icon="@android:drawable/ic_menu_share"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_select_all_manifest"
+        android:title="@string/action_select_all"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_copy_manifest"
+        android:title="@string/action_copy_manifest"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_copy_range"
+        android:title="@string/action_copy_range"
+        app:showAsAction="never" />
+</menu>
