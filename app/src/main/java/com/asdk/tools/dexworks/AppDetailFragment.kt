@@ -87,6 +87,12 @@ class AppDetailFragment : Fragment() {
 
         setupIconZoomViewer()
 
+        val openActivitiesInspector = View.OnClickListener {
+            openInspector(ActivityInspectorActivity::createIntent)
+        }
+        binding.textActivitiesCount.setOnClickListener(openActivitiesInspector)
+        binding.textActivitiesLabel.setOnClickListener(openActivitiesInspector)
+
         binding.btnRetryDetails.setOnClickListener {
             loadDetails()
         }
@@ -421,6 +427,9 @@ class AppDetailFragment : Fragment() {
         val apkFile = File(actualApkPath)
         val sizeBytes = if (apkFile.exists()) apkFile.length() else 0L
         binding.textApkSize.text = AppInfoUtils.formatFileSize(sizeBytes)
+        binding.layoutApkSize.setOnClickListener {
+            startApkSizeAnalysis(actualApkPath)
+        }
         binding.textApkPath.text = actualApkPath
 
         binding.btnCopyPath.setOnClickListener {
@@ -502,6 +511,77 @@ class AppDetailFragment : Fragment() {
             .setMessage(getString(R.string.dialog_sdk_message, info.version, info.name, info.codename))
             .setPositiveButton(android.R.string.ok, null)
             .show()
+    }
+
+    private fun startApkSizeAnalysis(apkPath: String) {
+        if (apkPath.isBlank() || !File(apkPath).exists()) {
+            Snackbar.make(binding.root, R.string.error_analyzing_apk_size, Snackbar.LENGTH_SHORT).show()
+            return
+        }
+
+        val dialogBinding = com.asdk.tools.dexworks.databinding.DialogApkSizeAnalysisBinding.inflate(layoutInflater)
+        dialogBinding.layoutLoading.isVisible = true
+        dialogBinding.layoutContent.isVisible = false
+
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.title_apk_size_analysis)
+            .setView(dialogBinding.root)
+            .setPositiveButton(android.R.string.ok, null)
+            .create()
+
+        dialog.show()
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val breakdown = withContext(Dispatchers.IO) {
+                    ApkSizeAnalyzer.analyzeApk(apkPath)
+                }
+                if (!isAdded || _binding == null) return@launch
+
+                dialogBinding.textTotalSize.text = getString(
+                    R.string.label_apk_total_size,
+                    AppInfoUtils.formatFileSize(breakdown.totalCompressedSize)
+                )
+                dialogBinding.textUncompressedAndFiles.text = "${getString(
+                    R.string.label_apk_uncompressed_size,
+                    AppInfoUtils.formatFileSize(breakdown.totalUncompressedSize)
+                )} • ${getString(R.string.label_apk_file_count, breakdown.totalFiles)}"
+
+                val slices = breakdown.categories.map {
+                    CylinderChartView.Slice(
+                        id = it.id,
+                        label = getString(it.nameResId),
+                        percentage = it.percentage,
+                        color = it.color
+                    )
+                }
+                dialogBinding.cylinderChart.setData(slices, animate = true)
+
+                dialogBinding.layoutCategoriesContainer.removeAllViews()
+                for (item in breakdown.categories) {
+                    val itemBinding = com.asdk.tools.dexworks.databinding.ItemApkCategoryBreakdownBinding.inflate(
+                        layoutInflater,
+                        dialogBinding.layoutCategoriesContainer,
+                        false
+                    )
+                    itemBinding.textCategoryName.setText(item.nameResId)
+                    itemBinding.textCategoryPercentage.text = String.format(java.util.Locale.getDefault(), "%.1f%%", item.percentage)
+                    itemBinding.progressCategory.setIndicatorColor(item.color)
+                    itemBinding.progressCategory.progress = item.percentage.toInt().coerceIn(0, 100)
+                    itemBinding.textCategorySize.text = "${AppInfoUtils.formatFileSize(item.compressedSize)} • ${getString(R.string.label_apk_file_count, item.fileCount)}"
+                    itemBinding.textCategoryUncompressed.text = getString(R.string.label_apk_original_size, AppInfoUtils.formatFileSize(item.uncompressedSize))
+
+                    dialogBinding.layoutCategoriesContainer.addView(itemBinding.root)
+                }
+
+                dialogBinding.layoutLoading.isVisible = false
+                dialogBinding.layoutContent.isVisible = true
+            } catch (e: Exception) {
+                if (!isAdded || _binding == null) return@launch
+                dialog.dismiss()
+                Snackbar.make(binding.root, R.string.error_analyzing_apk_size, Snackbar.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun copyToClipboard(label: String, text: String) {

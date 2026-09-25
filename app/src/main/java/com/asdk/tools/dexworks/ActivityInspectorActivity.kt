@@ -1,5 +1,6 @@
 package com.asdk.tools.dexworks
 
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
@@ -8,8 +9,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
+import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import android.view.animation.AccelerateInterpolator
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
@@ -18,6 +21,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.asdk.tools.dexworks.databinding.ActivityInspectorBinding
 import com.asdk.tools.dexworks.databinding.ItemActivityComponentBinding
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -46,6 +50,7 @@ class ActivityInspectorActivity : AppCompatActivity() {
     private var appName: String = ""
     private var packageName: String = ""
     private var isAppInstalled: Boolean = false
+    private var isScrollToTopButtonShown: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +64,15 @@ class ActivityInspectorActivity : AppCompatActivity() {
         checkAppInstalled()
         setupToolbar()
         setupSearch()
+        binding.btnScrollToTop.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            binding.recyclerActivities.smoothScrollToPosition(0)
+        }
+        binding.recyclerActivities.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                updateScrollToTopButton(recyclerView)
+            }
+        })
         binding.btnRetryActivities.setOnClickListener {
             loadActivities()
         }
@@ -119,6 +133,7 @@ class ActivityInspectorActivity : AppCompatActivity() {
         binding.layoutEmptyActivities.isVisible = false
         binding.layoutErrorActivities.isVisible = false
         binding.recyclerActivities.isVisible = false
+        updateScrollToTopButton(binding.recyclerActivities)
 
         lifecycleScope.launch {
             val list = try {
@@ -174,6 +189,42 @@ class ActivityInspectorActivity : AppCompatActivity() {
                 copyToClipboard("Activity Name", item.name)
             }
         )
+        binding.recyclerActivities.post {
+            updateScrollToTopButton(binding.recyclerActivities)
+        }
+    }
+
+    private fun updateScrollToTopButton(recyclerView: RecyclerView) {
+        val shouldShow = recyclerView.isVisible && recyclerView.canScrollVertically(-1)
+        val button = binding.btnScrollToTop
+        if (shouldShow) {
+            if (isScrollToTopButtonShown) return
+            isScrollToTopButtonShown = true
+            button.animate().cancel()
+            button.alpha = 0f
+            button.translationY = 16f * resources.displayMetrics.density
+            button.isVisible = true
+            button.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(250)
+                .setInterpolator(FastOutSlowInInterpolator())
+                .start()
+        } else if (isScrollToTopButtonShown) {
+            isScrollToTopButtonShown = false
+            button.animate().cancel()
+            button.animate()
+                .alpha(0f)
+                .translationY(16f * resources.displayMetrics.density)
+                .setDuration(150)
+                .setInterpolator(AccelerateInterpolator())
+                .withEndAction {
+                    if (!isScrollToTopButtonShown) {
+                        button.isVisible = false
+                    }
+                }
+                .start()
+        }
     }
 
     private fun launchActivity(item: ActivityComponentItem) {
@@ -185,8 +236,41 @@ class ActivityInspectorActivity : AppCompatActivity() {
             startActivity(intent)
             Snackbar.make(binding.root, R.string.toast_activity_launch_success, Snackbar.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Snackbar.make(binding.root, R.string.toast_activity_launch_failed, Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, R.string.toast_activity_launch_failed, Snackbar.LENGTH_INDEFINITE)
+                .setAction(R.string.action_why) {
+                    showActivityLaunchFailureDialog(item, e)
+                }
+                .show()
         }
+    }
+
+    private fun showActivityLaunchFailureDialog(item: ActivityComponentItem, error: Exception) {
+        val cause = when (error) {
+            is ActivityNotFoundException -> getString(R.string.activity_launch_cause_not_found)
+            is SecurityException -> getString(R.string.activity_launch_cause_security)
+            is IllegalArgumentException -> getString(R.string.activity_launch_cause_invalid_intent)
+            else -> getString(R.string.activity_launch_cause_unknown)
+        }
+        val details = error.message?.takeIf { it.isNotBlank() }
+            ?: getString(R.string.activity_launch_failure_no_details)
+        val message = getString(
+            R.string.activity_launch_failure_message,
+            cause,
+            getString(R.string.activity_launch_failure_details, item.name, error.javaClass.simpleName, details),
+            getString(R.string.activity_launch_failure_causes)
+        )
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.dialog_activity_launch_failed_title)
+            .setMessage(message)
+            .setNeutralButton(R.string.action_copy_error) { _, _ ->
+                copyToClipboard(
+                    getString(R.string.activity_launch_failure_copy_label),
+                    getString(R.string.activity_launch_exception_copy_text, error.javaClass.simpleName, details)
+                )
+            }
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     private fun copyToClipboard(label: String, text: String) {

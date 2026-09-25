@@ -259,24 +259,54 @@
 
                 <!-- APK Size -->
                 <LinearLayout
+                    android:id="@+id/layout_apk_size"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="vertical">
+                    android:layout_marginTop="8dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingVertical="6dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="@string/label_apk_size"
-                        android:textAppearance="?attr/textAppearanceLabelSmall"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-                    <TextView
-                        android:id="@+id/text_apk_size"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="?attr/textAppearanceBodyMedium"
-                        tools:text="15.4 MB" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_apk_size"
+                            android:textAppearance="?attr/textAppearanceLabelSmall"
+                            android:textColor="?android:attr/textColorSecondary" />
+
+                        <TextView
+                            android:id="@+id/text_apk_size"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textAppearance="?attr/textAppearanceTitleMedium"
+                            android:textStyle="bold"
+                            tools:text="15.4 MB" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/desc_tap_for_size_analysis"
+                            android:textAppearance="?attr/textAppearanceLabelSmall"
+                            android:textColor="?attr/colorPrimary" />
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="?android:attr/textColorSecondary" />
 
                 </LinearLayout>
 
@@ -445,13 +475,18 @@
                             android:id="@+id/text_activities_count"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:clickable="true"
+                            android:focusable="true"
                             android:textAppearance="?attr/textAppearanceTitleMedium"
                             android:textStyle="bold"
                             tools:text="14" />
 
                         <TextView
+                            android:id="@+id/text_activities_label"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:clickable="true"
+                            android:focusable="true"
                             android:text="@string/label_activities"
                             android:textAppearance="?attr/textAppearanceBodySmall"
                             android:textColor="?android:attr/textColorSecondary" />

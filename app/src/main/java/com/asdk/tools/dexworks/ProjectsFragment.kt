@@ -1,5 +1,7 @@
 package com.asdk.tools.dexworks
 
+import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.text.format.DateUtils
 import android.view.LayoutInflater
@@ -7,16 +9,24 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.asdk.tools.dexworks.databinding.FragmentProjectsBinding
 import com.asdk.tools.dexworks.databinding.ItemProjectBinding
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 data class ProjectItem(
     val name: String,
     val path: String,
-    val lastModified: Long
+    val lastModified: Long,
+    val apkPath: String? = null,
+    val iconKey: String = ProjectIconCatalog.DEFAULT_KEY,
+    val useApkIcon: Boolean = false
 )
 
 class ProjectsFragment : Fragment() {
@@ -47,11 +57,33 @@ class ProjectsFragment : Fragment() {
         }
 
         binding.fabAddProject.setOnClickListener {
-            Snackbar.make(binding.root, R.string.not_yet_implemented, Snackbar.LENGTH_SHORT).show()
+            startActivity(Intent(requireContext(), ProjectWizardActivity::class.java))
         }
 
-        // Show empty state placeholder until data source is provided
-        showEmpty()
+        loadProjects()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (_binding != null) {
+            loadProjects()
+        }
+    }
+
+    private fun loadProjects() {
+        val cached = ProjectStore.getCachedProjects()
+        if (cached != null) {
+            showProjects(cached)
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val projects = withContext(Dispatchers.IO) {
+                ProjectStore.loadProjects(requireContext(), forceReload = true)
+            }
+            if (_binding != null) {
+                showProjects(projects)
+            }
+        }
     }
 
     fun showEmpty() {
@@ -79,14 +111,18 @@ class ProjectsFragment : Fragment() {
     }
 
     private fun openProjectDetails(project: ProjectItem) {
-        val file = File(project.path)
-        if (file.exists() && project.path.endsWith(".apk", ignoreCase = true)) {
-            AppDetailActivity.start(requireContext(), apkPath = project.path)
-        } else if (!project.path.contains("/") && project.path.contains(".")) {
-            AppDetailActivity.start(requireContext(), packageName = project.path)
-        } else {
-            Snackbar.make(binding.root, R.string.not_yet_implemented, Snackbar.LENGTH_SHORT).show()
+        val importedApk = project.apkPath?.takeIf { File(it).isFile }
+        val legacyApk = project.path.takeIf {
+            File(it).isFile && it.endsWith(".apk", ignoreCase = true)
         }
+        startActivity(
+            ProjectOptionsActivity.createIntent(
+                requireContext(),
+                project.name,
+                project.path,
+                importedApk ?: legacyApk
+            )
+        )
     }
 
     override fun onDestroyView() {
@@ -114,8 +150,29 @@ class ProjectsFragment : Fragment() {
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val item = items[position]
+            val context = holder.itemView.context
+            val apkPath = item.apkPath
             holder.binding.textProjectName.text = item.name
             holder.binding.textProjectSubtitle.text = item.path
+            val apkIcon = if (item.useApkIcon && !apkPath.isNullOrBlank()) {
+                AppInfoUtils.getPackageArchiveInfo(context, apkPath)
+                    ?.applicationInfo
+                    ?.loadIcon(context.packageManager)
+            } else {
+                null
+            }
+            if (apkIcon != null) {
+                holder.binding.imgProjectIcon.imageTintList = null
+                holder.binding.imgProjectIcon.setImageDrawable(apkIcon)
+            } else {
+                holder.binding.imgProjectIcon.imageTintList = ColorStateList.valueOf(
+                    MaterialColors.getColor(
+                        holder.binding.imgProjectIcon,
+                        androidx.appcompat.R.attr.colorPrimary
+                    )
+                )
+                holder.binding.imgProjectIcon.setImageResource(ProjectIconCatalog.iconRes(item.iconKey))
+            }
 
             val formattedDate = if (item.lastModified > 0) {
                 DateUtils.getRelativeTimeSpanString(

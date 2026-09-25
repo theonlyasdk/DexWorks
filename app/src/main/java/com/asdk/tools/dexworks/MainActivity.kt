@@ -19,25 +19,23 @@ import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.core.widget.addTextChangedListener
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
+import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceManager
 import com.asdk.tools.dexworks.databinding.ActivityMainBinding
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private var allInstalledApps: List<AppItem> = emptyList()
 
-    private val notificationPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (!granted && shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS)) {
-                Snackbar.make(binding.root, R.string.perm_notif_rationale, Snackbar.LENGTH_LONG)
-                    .setAction(R.string.action_retry) {
-                        notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                    .show()
-            }
-        }
+    private lateinit var notificationPermissionLauncher: androidx.activity.result.ActivityResultLauncher<String>
+
+    private fun requestNotificationPermission() {
+        notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,14 +61,29 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.toolbar)
 
+        notificationPermissionLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                if (!granted && shouldShowRequestPermissionRationale(android.Manifest.permission.POST_NOTIFICATIONS)) {
+                    Snackbar.make(binding.root, R.string.perm_notif_rationale, Snackbar.LENGTH_LONG)
+                        .setAction(R.string.action_retry) {
+                            requestNotificationPermission()
+                        }
+                        .show()
+                }
+            }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
-            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            requestNotificationPermission()
         }
 
         setupSearch()
         setupSwipeNavigation()
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            ProjectStore.preload(applicationContext)
+        }
     }
 
     private fun setupSearch() {
@@ -111,18 +124,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun filterSearchResults(query: String) {
-        val showSystemApps = PreferenceManager.getDefaultSharedPreferences(this)
-            .getBoolean("show_system_apps", false)
-        val baseList = if (showSystemApps) {
+        val filtered = if (query.isBlank()) {
             allInstalledApps
         } else {
-            allInstalledApps.filter { !it.isSystemApp }
-        }
-
-        val filtered = if (query.isBlank()) {
-            baseList
-        } else {
-            baseList.filter { app ->
+            allInstalledApps.filter { app ->
                 app.name.contains(query, ignoreCase = true) ||
                         app.packageName.contains(query, ignoreCase = true)
             }
@@ -252,16 +257,9 @@ class MainActivity : AppCompatActivity() {
                     .start()
             }
 
-            val navHeight = if (binding.bottomNav.height > 0) binding.bottomNav.height.toFloat() else 80 * resources.displayMetrics.density
-            binding.bottomNav.animate()
-                .alpha(0f)
-                .translationY(navHeight)
-                .setDuration(180)
-                .setInterpolator(FastOutSlowInInterpolator())
-                .withEndAction {
-                    binding.bottomNav.visibility = View.GONE
-                }
-                .start()
+            binding.bottomNav.visibility = View.GONE
+            binding.bottomNav.alpha = 1f
+            binding.bottomNav.translationY = 0f
         }
     }
 
@@ -315,15 +313,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            binding.bottomNav.apply {
-                visibility = View.VISIBLE
-                animate()
-                    .alpha(1f)
-                    .translationY(0f)
-                    .setDuration(220)
-                    .setInterpolator(FastOutSlowInInterpolator())
-                    .start()
-            }
+            binding.bottomNav.visibility = View.VISIBLE
+            binding.bottomNav.alpha = 1f
+            binding.bottomNav.translationY = 0f
         } else {
             binding.layoutSelectionTopBar.visibility = View.GONE
             if (binding.viewPager.currentItem == 0) {
@@ -347,34 +339,8 @@ class MainActivity : AppCompatActivity() {
         return true
     }
 
-    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val showSystem = PreferenceManager.getDefaultSharedPreferences(this)
-            .getBoolean("show_system_apps", false)
-
-        val showSystemItem = menu.findItem(R.id.action_show_system_apps)
-        showSystemItem?.isChecked = showSystem
-
-        val searchShowSystemItem = binding.searchBar.menu.findItem(R.id.action_show_system_apps)
-        searchShowSystemItem?.isChecked = showSystem
-
-        return super.onPrepareOptionsMenu(menu)
-    }
-
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.action_show_system_apps -> {
-                val newChecked = !item.isChecked
-                item.isChecked = newChecked
-                binding.searchBar.menu.findItem(R.id.action_show_system_apps)?.isChecked = newChecked
-                PreferenceManager.getDefaultSharedPreferences(this)
-                    .edit()
-                    .putBoolean("show_system_apps", newChecked)
-                    .apply()
-                if (binding.searchView.isShowing) {
-                    filterSearchResults(binding.searchView.editText.text?.toString()?.trim() ?: "")
-                }
-                true
-            }
             R.id.action_settings -> {
                 val intent = Intent(this, PreferenceActivity::class.java)
                 startActivity(intent)

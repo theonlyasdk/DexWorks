@@ -6,18 +6,19 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.asdk.tools.dexworks.databinding.ActivityManifestInspectorBinding
 import com.google.android.material.snackbar.Snackbar
-import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
-import io.github.rosemoe.sora.widget.schemes.SchemeDarcula
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 class ManifestInspectorActivity : AppCompatActivity() {
 
@@ -67,7 +68,9 @@ class ManifestInspectorActivity : AppCompatActivity() {
             setEditable(false)
             setLineNumberEnabled(true)
             setScalable(true)
-            setScaleTextSizes(9f, 28f)
+            val minPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 8f, resources.displayMetrics)
+            val maxPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 32f, resources.displayMetrics)
+            setScaleTextSizes(minPx, maxPx)
             setPinLineNumber(true)
             setWordwrap(false)
             setHighlightCurrentLine(false)
@@ -75,7 +78,8 @@ class ManifestInspectorActivity : AppCompatActivity() {
             val isDarkMode = (resources.configuration.uiMode and
                     android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                     android.content.res.Configuration.UI_MODE_NIGHT_YES
-            colorScheme = if (isDarkMode) SchemeDarcula() else EditorColorScheme()
+            colorScheme = XmlColorScheme(isDarkMode)
+            setEditorLanguage(XmlLanguage())
         }
     }
 
@@ -252,12 +256,39 @@ class ManifestInspectorActivity : AppCompatActivity() {
 
     private fun shareManifest() {
         val xml = manifestXml ?: return
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, "$appName AndroidManifest.xml")
-            putExtra(Intent.EXTRA_TEXT, xml)
+        lifecycleScope.launch {
+            val uri = withContext(Dispatchers.IO) {
+                try {
+                    val context = applicationContext
+                    val shareDir = File(context.cacheDir, "shared_manifests")
+                    if (!shareDir.exists()) {
+                        shareDir.mkdirs()
+                    } else {
+                        shareDir.listFiles()?.forEach { it.delete() }
+                    }
+
+                    val targetName = appName.ifBlank { packageName }.ifBlank { "app" }
+                    val sanitizedAppName = targetName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                    val targetFile = File(shareDir, "${sanitizedAppName}_AndroidManifest.xml")
+                    targetFile.writeText(xml, Charsets.UTF_8)
+                    FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", targetFile)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+            if (uri != null && !isFinishing && !isDestroyed) {
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/xml"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, "$appName AndroidManifest.xml")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                startActivity(Intent.createChooser(shareIntent, getString(R.string.action_share_manifest)))
+            } else if (!isFinishing && !isDestroyed) {
+                Snackbar.make(binding.root, R.string.toast_manifest_share_failed, Snackbar.LENGTH_SHORT).show()
+            }
         }
-        startActivity(Intent.createChooser(intent, getString(R.string.action_share_manifest)))
     }
 
     override fun onDestroy() {

@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.TypedValue
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import androidx.core.view.isVisible
@@ -23,6 +24,7 @@ class FastScrollBarView @JvmOverloads constructor(
     private var lastVisible: Int = 0
     private var totalItems: Int = 0
     private var isDragging: Boolean = false
+    private var lastHapticPosition: Int = -1
 
     private val density = resources.displayMetrics.density
     private val trackWidth = 4f * density
@@ -124,6 +126,7 @@ class FastScrollBarView @JvmOverloads constructor(
                 animate().cancel()
                 removeCallbacks(hideRunnable)
                 alpha = 1f
+                lastHapticPosition = -1
                 scrubTo(event.y)
                 parent?.requestDisallowInterceptTouchEvent(true)
                 return true
@@ -134,6 +137,7 @@ class FastScrollBarView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 isDragging = false
+                lastHapticPosition = -1
                 invalidate()
                 parent?.requestDisallowInterceptTouchEvent(false)
                 onScrubFinished?.invoke()
@@ -147,6 +151,10 @@ class FastScrollBarView @JvmOverloads constructor(
     private fun scrubTo(y: Float) {
         val fraction = (y / height).coerceIn(0f, 1f)
         val position = (fraction * totalItems).toInt().coerceIn(0, totalItems - 1)
+        if (position != lastHapticPosition) {
+            performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            lastHapticPosition = position
+        }
         invalidate()
         onScrubTo?.invoke(position)
     }

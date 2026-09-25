@@ -7,6 +7,59 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <!-- Sort & Filter Bar -->
+    <LinearLayout
+        android:id="@+id/layout_sort_filter_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="6dp">
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/button_group_sort_filter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:selectionRequired="false"
+            app:singleSelection="false">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_sort"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minHeight="40dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                app:icon="@drawable/ic_arrow_upward"
+                app:iconGravity="textStart"
+                app:iconSize="18dp"
+                tools:text="Name" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_filter"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minHeight="40dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                app:icon="@drawable/ic_filter_list"
+                app:iconGravity="textStart"
+                app:iconSize="18dp"
+                tools:text="All" />
+
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+    </LinearLayout>
+
     <!-- Gmail-style Select All row beneath top bar -->
     <LinearLayout
         android:id="@+id/layout_select_all_header"
@@ -146,6 +199,19 @@
             android:layout_height="match_parent"
             android:layout_gravity="end"
             android:visibility="gone" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btn_scroll_to_top"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="@string/action_scroll_to_top"
+            android:visibility="gone"
+            app:fabSize="mini"
+            app:srcCompat="@drawable/ic_scroll_to_top"
+            app:backgroundTint="?attr/colorPrimaryContainer"
+            app:tint="?attr/colorOnPrimaryContainer" />
 
         <!-- Current-letter preview shown while scrubbing -->
         <TextView

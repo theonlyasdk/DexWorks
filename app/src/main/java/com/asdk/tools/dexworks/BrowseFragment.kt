@@ -4,9 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.DocumentsContract
 import android.provider.Settings
+import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -39,13 +41,40 @@ class BrowseFragment : Fragment() {
     private var _binding: FragmentBrowseBinding? = null
     private val binding get() = _binding!!
 
+    enum class SortType(val titleResId: Int) {
+        NAME(R.string.sort_by_name),
+        SIZE(R.string.sort_by_size),
+        PACKAGE(R.string.sort_by_package)
+    }
+
+    enum class FilterOption(val titleResId: Int) {
+        ALL(R.string.filter_option_all),
+        USER(R.string.filter_option_user),
+        SYSTEM(R.string.filter_option_system)
+    }
+
+    private var currentSortType: SortType = SortType.NAME
+    private var isSortAscending: Boolean = true
+    private var currentFilter: FilterOption = FilterOption.ALL
+
     private var allInstalledApps: List<AppItem> = emptyList()
     private var displayedApps: List<AppItem> = emptyList()
     private var showSystemApps: Boolean = false
 
     private var isSelectionMode: Boolean = false
+    private var isScrollToTopButtonShown: Boolean = false
     private val selectedPackageNames = mutableSetOf<String>()
     private val originalSelectedBeforeDrag = mutableSetOf<String>()
+    private var pendingScrubPosition: Int = RecyclerView.NO_POSITION
+    private var scrubPosted: Boolean = false
+    private val applyScrubPositionRunnable = Runnable {
+        scrubPosted = false
+        val position = pendingScrubPosition
+        pendingScrubPosition = RecyclerView.NO_POSITION
+        if (position != RecyclerView.NO_POSITION) {
+            binding.recyclerApps.scrollToPosition(position)
+        }
+    }
     private var backPressedCallback: OnBackPressedCallback? = null
     private var dragSelectTouchListener: DragSelectTouchListener? = null
 
@@ -53,6 +82,7 @@ class BrowseFragment : Fragment() {
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == PREF_SHOW_SYSTEM_APPS) {
             showSystemApps = preferences.getBoolean(PREF_SHOW_SYSTEM_APPS, false)
+            currentFilter = if (showSystemApps) FilterOption.ALL else FilterOption.USER
             applyDisplayFilter()
         }
     }
@@ -78,7 +108,11 @@ class BrowseFragment : Fragment() {
 
         preferences = PreferenceManager.getDefaultSharedPreferences(requireContext())
         showSystemApps = preferences.getBoolean(PREF_SHOW_SYSTEM_APPS, false)
+        currentFilter = if (showSystemApps) FilterOption.ALL else FilterOption.USER
         preferences.registerOnSharedPreferenceChangeListener(prefsListener)
+
+        binding.btnSort.setOnClickListener { showSortMenu(it) }
+        binding.btnFilter.setOnClickListener { showFilterMenu(it) }
 
         backPressedCallback = object : OnBackPressedCallback(false) {
             override fun handleOnBackPressed() {
@@ -112,6 +146,10 @@ class BrowseFragment : Fragment() {
         binding.swipeRefresh.setOnRefreshListener {
             loadInstalledApps(isSwipeRefresh = true)
         }
+        binding.btnScrollToTop.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            scrollToTop()
+        }
 
         binding.fastScroller.contentDescription = getString(R.string.cd_alphabet_index)
         binding.fastScroller.onScrubTo = { scrubToPosition(it) }
@@ -120,6 +158,7 @@ class BrowseFragment : Fragment() {
         }
         binding.recyclerApps.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
+                updateScrollToTopButton(rv)
                 if (isSelectionMode) return
                 val lm = rv.layoutManager as? LinearLayoutManager ?: return
                 binding.fastScroller.updateRange(
@@ -146,11 +185,46 @@ class BrowseFragment : Fragment() {
         _binding?.recyclerApps?.smoothScrollToPosition(0)
     }
 
+    private fun updateScrollToTopButton(recyclerView: RecyclerView) {
+        val shouldShow = recyclerView.isVisible && recyclerView.canScrollVertically(-1)
+        val button = binding.btnScrollToTop
+        if (shouldShow) {
+            if (isScrollToTopButtonShown) return
+            isScrollToTopButtonShown = true
+            button.animate().cancel()
+            button.alpha = 0f
+            button.translationY = 16f * resources.displayMetrics.density
+            button.isVisible = true
+            button.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(250)
+                .setInterpolator(FastOutSlowInInterpolator())
+                .start()
+        } else if (isScrollToTopButtonShown) {
+            isScrollToTopButtonShown = false
+            button.animate().cancel()
+            button.animate()
+                .alpha(0f)
+                .translationY(16f * resources.displayMetrics.density)
+                .setDuration(150)
+                .setInterpolator(AccelerateInterpolator())
+                .withEndAction {
+                    if (!isScrollToTopButtonShown) {
+                        button.isVisible = false
+                    }
+                }
+                .start()
+        }
+    }
+
     private fun loadInstalledApps(isSwipeRefresh: Boolean = false) {
         if (!isSwipeRefresh) {
             binding.layoutLoading.isVisible = true
+            binding.layoutSortFilterBar.isVisible = false
             binding.recyclerApps.isVisible = false
             binding.layoutEmpty.isVisible = false
+            updateScrollToTopButton(binding.recyclerApps)
             binding.fastScroller.hideNow()
             binding.textLetterPreview.animate().cancel()
             binding.textLetterPreview.alpha = 1f
@@ -178,6 +252,15 @@ class BrowseFragment : Fragment() {
             allInstalledApps = apps
             (activity as? MainActivity)?.updateInstalledApps(apps)
             binding.layoutLoading.isVisible = false
+            if (isSwipeRefresh && _binding != null) {
+                binding.swipeRefresh.performHapticFeedback(
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        HapticFeedbackConstants.CONFIRM
+                    } else {
+                        HapticFeedbackConstants.CONTEXT_CLICK
+                    }
+                )
+            }
             binding.swipeRefresh.isRefreshing = false
             applyDisplayFilter()
         }
@@ -248,6 +331,7 @@ class BrowseFragment : Fragment() {
     private fun updateSelectionUI(duringDrag: Boolean = false) {
         binding.swipeRefresh.isEnabled = !isSelectionMode
         if (isSelectionMode) {
+            binding.layoutSortFilterBar.isVisible = false
             if (binding.layoutSelectAllHeader.visibility != View.VISIBLE) {
                 binding.layoutSelectAllHeader.animate().cancel()
                 binding.layoutSelectAllHeader.alpha = 0f
@@ -270,6 +354,7 @@ class BrowseFragment : Fragment() {
             }
             (activity as? MainActivity)?.updateSelectionCount(count)
         } else {
+            binding.layoutSortFilterBar.isVisible = true
             if (binding.layoutSelectAllHeader.visibility == View.VISIBLE) {
                 binding.layoutSelectAllHeader.animate().cancel()
                 binding.layoutSelectAllHeader.animate()
@@ -293,6 +378,49 @@ class BrowseFragment : Fragment() {
         }
     }
 
+    private fun showSortMenu(anchor: View) {
+        val popup = androidx.appcompat.widget.PopupMenu(requireContext(), anchor)
+        val menu = popup.menu
+        SortType.values().forEachIndexed { index, sortType ->
+            val item = menu.add(0, index, index, sortType.titleResId)
+            item.isCheckable = true
+            item.isChecked = (sortType == currentSortType)
+        }
+        menu.setGroupCheckable(0, true, true)
+        popup.setOnMenuItemClickListener { menuItem ->
+            val selected = SortType.values().getOrNull(menuItem.itemId) ?: return@setOnMenuItemClickListener false
+            if (selected == currentSortType) {
+                isSortAscending = !isSortAscending
+            } else {
+                currentSortType = selected
+                isSortAscending = (selected != SortType.SIZE)
+            }
+            applyDisplayFilter(preserveSelection = isSelectionMode)
+            true
+        }
+        popup.show()
+    }
+
+    private fun showFilterMenu(anchor: View) {
+        val popup = androidx.appcompat.widget.PopupMenu(requireContext(), anchor)
+        val menu = popup.menu
+        FilterOption.values().forEachIndexed { index, option ->
+            val item = menu.add(0, index, index, option.titleResId)
+            item.isCheckable = true
+            item.isChecked = (option == currentFilter)
+        }
+        menu.setGroupCheckable(0, true, true)
+        popup.setOnMenuItemClickListener { menuItem ->
+            val selected = FilterOption.values().getOrNull(menuItem.itemId) ?: return@setOnMenuItemClickListener false
+            if (selected != currentFilter) {
+                currentFilter = selected
+                applyDisplayFilter(preserveSelection = isSelectionMode)
+            }
+            true
+        }
+        popup.show()
+    }
+
     private fun saveSelectedApksAsZip() {
         val selected = displayedApps.filter { selectedPackageNames.contains(it.packageName) }
         if (selected.isNotEmpty()) {
@@ -310,15 +438,41 @@ class BrowseFragment : Fragment() {
             binding.layoutSelectAllHeader.isVisible = false
             binding.swipeRefresh.isEnabled = true
         }
+        binding.layoutSortFilterBar.isVisible = !isSelectionMode
 
-        displayedApps = if (showSystemApps) {
-            allInstalledApps
-        } else {
-            allInstalledApps.filter { !it.isSystemApp }
+        val filtered = when (currentFilter) {
+            FilterOption.ALL -> allInstalledApps
+            FilterOption.USER -> allInstalledApps.filter { !it.isSystemApp }
+            FilterOption.SYSTEM -> allInstalledApps.filter { it.isSystemApp }
         }
+
+        displayedApps = when (currentSortType) {
+            SortType.NAME -> if (isSortAscending) {
+                filtered.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+            } else {
+                filtered.sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER) { it.name })
+            }
+            SortType.SIZE -> if (isSortAscending) {
+                filtered.sortedWith(compareBy<AppItem> { it.sizeBytes }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+            } else {
+                filtered.sortedWith(compareByDescending<AppItem> { it.sizeBytes }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+            }
+            SortType.PACKAGE -> if (isSortAscending) {
+                filtered.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.packageName })
+            } else {
+                filtered.sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER) { it.packageName })
+            }
+        }
+
+        binding.btnSort.text = getString(currentSortType.titleResId)
+        binding.btnSort.setIconResource(
+            if (isSortAscending) R.drawable.ic_arrow_upward else R.drawable.ic_arrow_downward
+        )
+        binding.btnFilter.text = getString(currentFilter.titleResId)
 
         binding.recyclerApps.isVisible = displayedApps.isNotEmpty()
         binding.layoutEmpty.isVisible = displayedApps.isEmpty()
+        updateScrollToTopButton(binding.recyclerApps)
         if (displayedApps.isEmpty()) {
             binding.fastScroller.hideNow()
             binding.textLetterPreview.animate().cancel()
@@ -334,6 +488,7 @@ class BrowseFragment : Fragment() {
                     lm.findLastVisibleItemPosition(),
                     lm.itemCount
                 )
+                updateScrollToTopButton(binding.recyclerApps)
             }
         }
 
@@ -390,7 +545,11 @@ class BrowseFragment : Fragment() {
         binding.textLetterPreview.animate().cancel()
         binding.textLetterPreview.alpha = 1f
         binding.textLetterPreview.isVisible = true
-        binding.recyclerApps.scrollToPosition(position)
+        pendingScrubPosition = position
+        if (!scrubPosted) {
+            scrubPosted = true
+            binding.recyclerApps.postOnAnimation(applyScrubPositionRunnable)
+        }
     }
 
     private fun fadeOutLetterPreview() {
@@ -416,6 +575,9 @@ class BrowseFragment : Fragment() {
         backPressedCallback?.remove()
         backPressedCallback = null
         preferences.unregisterOnSharedPreferenceChangeListener(prefsListener)
+        binding.recyclerApps.removeCallbacks(applyScrubPositionRunnable)
+        pendingScrubPosition = RecyclerView.NO_POSITION
+        scrubPosted = false
         _binding = null
     }
 

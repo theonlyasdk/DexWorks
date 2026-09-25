@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_apk_preview"
+        android:icon="@drawable/ic_widgets"
+        android:title="@string/apk_browse_preview" />
+    <item
+        android:id="@+id/action_apk_copy_path"
+        android:icon="@drawable/ic_copy"
+        android:title="@string/apk_browse_copy_path" />
+    <item
+        android:id="@+id/action_apk_share"
+        android:icon="@drawable/ic_tool_extract"
+        android:title="@string/apk_browse_share_entry" />
+    <item
+        android:id="@+id/action_apk_info"
+        android:icon="@drawable/ic_tool_manifest"
+        android:title="@string/apk_browse_file_info" />
+</menu>

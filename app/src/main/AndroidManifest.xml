@@ -70,6 +70,55 @@
             android:windowSoftInputMode="adjustResize">
         </activity>
 
+        <activity
+            android:name=".ProjectWizardActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DexWorks"
+            android:windowSoftInputMode="adjustResize">
+        </activity>
+
+        <activity
+            android:name=".ProjectIconPickerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DexWorks"
+            android:windowSoftInputMode="adjustResize">
+        </activity>
+
+        <activity
+            android:name=".ProjectOptionsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DexWorks"
+            android:windowSoftInputMode="adjustResize">
+        </activity>
+
+        <activity
+            android:name=".ApkBrowseActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DexWorks"
+            android:windowSoftInputMode="adjustResize">
+        </activity>
+
+        <activity
+            android:name=".ApkXmlViewerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DexWorks"
+            android:windowSoftInputMode="adjustResize">
+        </activity>
+
+        <activity
+            android:name=".ApkHexViewerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DexWorks"
+            android:windowSoftInputMode="adjustResize">
+        </activity>
+
+        <activity
+            android:name=".ApkImageViewerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DexWorks"
+            android:windowSoftInputMode="adjustResize">
+        </activity>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

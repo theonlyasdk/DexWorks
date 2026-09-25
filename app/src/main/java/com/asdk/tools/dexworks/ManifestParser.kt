@@ -10,7 +10,10 @@ object ManifestParser {
     private const val ANDROID_NS = "http://schemas.android.com/apk/res/android"
     private const val APP_NS = "http://schemas.android.com/apk/res-auto"
 
-    fun decodeManifest(apkPath: String): Result<String> {
+    fun decodeManifest(apkPath: String): Result<String> =
+        decodeXmlEntry(apkPath, "AndroidManifest.xml")
+
+    fun decodeXmlEntry(apkPath: String, entryPath: String): Result<String> {
         val file = File(apkPath)
         if (!file.exists()) {
             return Result.failure(IllegalArgumentException("APK file does not exist: $apkPath"))
@@ -25,7 +28,7 @@ object ManifestParser {
                 return Result.failure(IllegalStateException("Could not add asset path for APK"))
             }
 
-            parser = assetManager.openXmlResourceParser(cookie, "AndroidManifest.xml")
+            parser = assetManager.openXmlResourceParser(cookie, entryPath)
             val xml = formatXml(parser)
             Result.success(xml)
         } catch (e: Exception) {
