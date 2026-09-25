@@ -484,4 +484,28 @@
     <string name="settings_about">About DexWorks</string>
     <string name="settings_about_version">Version %1$s</string>
     <string name="settings_about_close">Close</string>
+
+    <!-- Vibration tester -->
+    <string name="vibration_title">Vibration Test</string>
+    <string name="vibration_capability_full">Vibrator available. Amplitude control: %1$s. Composition primitives: %2$s.</string>
+    <string name="vibration_capability_none">This device has no vibrator.</string>
+    <string name="vibration_yes">yes</string>
+    <string name="vibration_no">no</string>
+    <string name="vibration_section_single">Single pulse</string>
+    <string name="vibration_section_pattern">Custom pattern</string>
+    <string name="vibration_section_tests">Preset tests</string>
+    <string name="vibration_duration">Duration: %1$d ms</string>
+    <string name="vibration_amplitude">Amplitude: %1$d</string>
+    <string name="vibration_amplitude_off">Amplitude: fixed by the system</string>
+    <string name="vibration_step">Step %1$d on: %2$d ms</string>
+    <string name="vibration_repeat">Repeat pattern</string>
+    <string name="vibration_run">Vibrate</string>
+    <string name="vibration_run_pattern">Run pattern</string>
+    <string name="vibration_stop">Stop</string>
+    <string name="vibration_preview">timings %1$s amplitudes %2$s repeat %3$d</string>
+    <string name="vibration_tests_summary">Short factory-style impulses. Test 2 mimics the O-Haptics tap used on Oppo phones, which needs Android 11 or newer to feel accurate.</string>
+    <string name="vibration_test_1">Test 1: double tap</string>
+    <string name="vibration_test_2">Test 2: O-Haptics style (Oppo)</string>
+    <string name="vibration_test_3">Test 3: heartbeat</string>
+    <string name="vibration_about_hint">Opens the vibration tester</string>
 </resources>

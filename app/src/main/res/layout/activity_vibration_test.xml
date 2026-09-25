@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:navigationIcon="?attr/homeAsUpIndicator"
+        app:title="@string/vibration_title" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.Material3.CardView.Outlined"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/text_capability"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    tools:text="Vibrator available, amplitude control supported" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.Material3.CardView.Outlined"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/vibration_section_single"
+                        android:textAppearance="?attr/textAppearanceTitleMedium"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:id="@+id/label_single_duration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textAppearance="?attr/textAppearanceLabelLarge"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        tools:text="Duration: 200 ms" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_single_duration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/vibration_section_single"
+                        android:stepSize="10"
+                        android:value="200"
+                        android:valueFrom="10"
+                        android:valueTo="2000" />
+
+                    <TextView
+                        android:id="@+id/label_single_amplitude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textAppearance="?attr/textAppearanceLabelLarge"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        tools:text="Amplitude: 200" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_single_amplitude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/vibration_amplitude"
+                        android:stepSize="5"
+                        android:value="200"
+                        android:valueFrom="0"
+                        android:valueTo="255" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_vibrate"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/vibration_run" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.Material3.CardView.Outlined"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/vibration_section_pattern"
+                        android:textAppearance="?attr/textAppearanceTitleMedium"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:id="@+id/label_step_1_duration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textAppearance="?attr/textAppearanceLabelLarge"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        tools:text="Step 1 on: 40 ms" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_step_1_duration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/vibration_section_pattern"
+                        android:stepSize="5"
+                        android:value="40"
+                        android:valueFrom="0"
+                        android:valueTo="500" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_step_1_amplitude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/vibration_amplitude"
+                        android:stepSize="5"
+                        android:value="220"
+                        android:valueFrom="0"
+                        android:valueTo="255" />
+
+                    <TextView
+                        android:id="@+id/label_step_2_duration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textAppearance="?attr/textAppearanceLabelLarge"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        tools:text="Step 2 on: 40 ms" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_step_2_duration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/vibration_section_pattern"
+                        android:stepSize="5"
+                        android:value="40"
+                        android:valueFrom="0"
+                        android:valueTo="500" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_step_2_amplitude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/vibration_amplitude"
+                        android:stepSize="5"
+                        android:value="220"
+                        android:valueFrom="0"
+                        android:valueTo="255" />
+
+                    <TextView
+                        android:id="@+id/label_step_3_duration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textAppearance="?attr/textAppearanceLabelLarge"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        tools:text="Step 3 on: 40 ms" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_step_3_duration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/vibration_section_pattern"
+                        android:stepSize="5"
+                        android:value="40"
+                        android:valueFrom="0"
+                        android:valueTo="500" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_step_3_amplitude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/vibration_amplitude"
+                        android:stepSize="5"
+                        android:value="220"
+                        android:valueFrom="0"
+                        android:valueTo="255" />
+
+                    <TextView
+                        android:id="@+id/label_step_4_duration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:textAppearance="?attr/textAppearanceLabelLarge"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        tools:text="Step 4 on: 40 ms" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_step_4_duration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/vibration_section_pattern"
+                        android:stepSize="5"
+                        android:value="40"
+                        android:valueFrom="0"
+                        android:valueTo="500" />
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_step_4_amplitude"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/vibration_amplitude"
+                        android:stepSize="5"
+                        android:value="220"
+                        android:valueFrom="0"
+                        android:valueTo="255" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_repeat"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/vibration_repeat"
+                        android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+                    <TextView
+                        android:id="@+id/text_pattern_preview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:fontFamily="monospace"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        tools:text="timings [0, 40, 60, 40] amplitudes [0, 220, 0, 220]" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_run_pattern"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/vibration_run_pattern" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.Material3.CardView.Outlined"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/vibration_section_tests"
+                        android:textAppearance="?attr/textAppearanceTitleMedium"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/vibration_tests_summary"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_test_1"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/vibration_test_1" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_test_2"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/vibration_test_2" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_test_3"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/vibration_test_3" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_stop"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/vibration_stop" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

@@ -1,5 +1,6 @@
 package com.asdk.tools.dexworks
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.preference.ListPreference
@@ -73,6 +74,10 @@ class PreferenceFragment : PreferenceFragmentCompat() {
                 R.string.settings_about_version,
                 readVersionName()
             )
+            preference.setOnPreferenceClickListener {
+                startActivity(Intent(requireContext(), VibrationTestActivity::class.java))
+                true
+            }
         }
     }
 
