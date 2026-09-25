@@ -23,7 +23,7 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
     companion object {
         const val EXTRA_APK_PATH = "extra_apk_path"
         const val EXTRA_ENTRY_PATH = "extra_entry_path"
-        private const val FULL_LOAD_MAX = 8 * 1024 * 1024
+        private const val FULL_LOAD_MAX_FALLBACK = 4L * 1024 * 1024
 
         fun createIntent(context: Context, apkPath: String, entryPath: String): Intent {
             return Intent(context, ApkHexViewerActivity::class.java).apply {
@@ -42,6 +42,7 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
     private var pageIndex: Int = 0
     private var pageCount: Int = 1
     private var pageStart: Long = 0L
+    private var pageSize: Long = FULL_LOAD_MAX_FALLBACK
 
     private lateinit var sheetBehavior: BottomSheetBehavior<android.view.View>
     private var sheetVisible: Boolean = false
@@ -62,6 +63,7 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
 
         apkPath = intent.getStringExtra(EXTRA_APK_PATH).orEmpty()
         entryPath = intent.getStringExtra(EXTRA_ENTRY_PATH).orEmpty()
+        pageSize = AppPrefs.hexPageSizeBytes(this)
 
         binding.toolbar.title = getString(R.string.title_hex_viewer)
         binding.toolbar.subtitle = entryPath
@@ -96,7 +98,7 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
             val current = binding.hexView.getSelectedOffset()
             if (current >= 0 && current < totalSize - 1) {
                 val next = current + 1
-                if (next >= pageStart + FULL_LOAD_MAX && pageIndex < pageCount - 1) {
+                if (next >= pageStart + pageSize && pageIndex < pageCount - 1) {
                     loadPage(pageIndex + 1, selectOffsetAfterLoad = next)
                 } else {
                     binding.hexView.selectOffset(next)
@@ -140,8 +142,8 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
             }
             result.onSuccess { (size, entry) ->
                 totalSize = size
-                isPaged = size > FULL_LOAD_MAX
-                pageCount = if (isPaged) ((size + FULL_LOAD_MAX - 1) / FULL_LOAD_MAX).toInt() else 1
+                isPaged = size > pageSize
+                pageCount = if (isPaged) ((size + pageSize - 1) / pageSize).toInt() else 1
                 loadPage(0)
             }.onFailure { error ->
                 showError(error.localizedMessage ?: getString(R.string.error_loading_hex))
@@ -151,7 +153,7 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
 
     private fun loadPage(index: Int, selectOffsetAfterLoad: Long? = null) {
         pageIndex = index
-        pageStart = index.toLong() * FULL_LOAD_MAX
+        pageStart = index.toLong() * pageSize
         binding.layoutLoading.isVisible = true
         binding.layoutError.isVisible = false
         binding.groupPaging.isVisible = isPaged
@@ -166,7 +168,7 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
                         val entry = zip.getEntry(entryPath)
                             ?: throw IllegalStateException("Entry not found: $entryPath")
                         val remaining = (totalSize - pageStart).coerceAtLeast(0)
-                        val length = minOf(remaining, FULL_LOAD_MAX.toLong()).toInt()
+                        val length = minOf(remaining, pageSize).toInt()
                         val buffer = ByteArray(length)
                         zip.getInputStream(entry).use { input ->
                             var skipped = 0L

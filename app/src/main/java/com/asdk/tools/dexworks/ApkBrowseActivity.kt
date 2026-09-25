@@ -7,6 +7,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.content.SharedPreferences
 import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
@@ -254,6 +255,7 @@ class ApkBrowseActivity : AppCompatActivity() {
         const val EXTRA_APK_PATH = "extra_apk_path"
         const val EXTRA_PROJECT_NAME = "extra_project_name"
         private const val LOADING_SPINNER_DELAY_MS = 250L
+        private const val KEY_APK_SORT = "apk_sort_type"
 
         fun createIntent(context: Context, apkPath: String, projectName: String): Intent {
             return Intent(context, ApkBrowseActivity::class.java).apply {
@@ -263,7 +265,32 @@ class ApkBrowseActivity : AppCompatActivity() {
         }
     }
 
-    private enum class SortMode { NAME, SIZE, TYPE, DATE }
+    private enum class SortMode {
+        NAME, SIZE, TYPE, DATE;
+
+        companion object {
+            fun fromKey(key: String?): SortMode = when (key) {
+                "size" -> SIZE
+                "type" -> TYPE
+                "date" -> DATE
+                else -> NAME
+            }
+
+            fun key(mode: SortMode): String = when (mode) {
+                NAME -> "name"
+                SIZE -> "size"
+                TYPE -> "type"
+                DATE -> "date"
+            }
+
+            fun menuId(mode: SortMode): Int = when (mode) {
+                NAME -> R.id.action_sort_name
+                SIZE -> R.id.action_sort_size
+                TYPE -> R.id.action_sort_type
+                DATE -> R.id.action_sort_date
+            }
+        }
+    }
 
     private lateinit var binding: ActivityApkBrowseBinding
     private lateinit var entryAdapter: ApkEntryAdapter
@@ -272,6 +299,7 @@ class ApkBrowseActivity : AppCompatActivity() {
     private var currentPath: String = ""
     private var sortMode: SortMode = SortMode.NAME
     private var foldersFirst: Boolean = true
+    private lateinit var prefs: SharedPreferences
     private var loadedEntries: List<ApkEntry> = emptyList()
     private var apkRootLabel: String = ""
     private var loadJob: Job? = null
@@ -283,6 +311,9 @@ class ApkBrowseActivity : AppCompatActivity() {
         binding = ActivityApkBrowseBinding.inflate(layoutInflater)
         setContentView(binding.root)
         fileSaveHelper = FileSaveHelper.from(this)
+        prefs = AppPrefs.get(this)
+        sortMode = SortMode.fromKey(prefs.getString(KEY_APK_SORT, null))
+        foldersFirst = AppPrefs.apkFoldersFirst(this)
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
             val systemBars = insets.getInsets(
@@ -302,32 +333,39 @@ class ApkBrowseActivity : AppCompatActivity() {
                 R.id.action_sort_name -> {
                     item.isChecked = true
                     applySort(SortMode.NAME)
+                    persistSort()
                     true
                 }
                 R.id.action_sort_size -> {
                     item.isChecked = true
                     applySort(SortMode.SIZE)
+                    persistSort()
                     true
                 }
                 R.id.action_sort_type -> {
                     item.isChecked = true
                     applySort(SortMode.TYPE)
+                    persistSort()
                     true
                 }
                 R.id.action_sort_date -> {
                     item.isChecked = true
                     applySort(SortMode.DATE)
+                    persistSort()
                     true
                 }
                 R.id.action_folders_first -> {
                     foldersFirst = !item.isChecked
                     item.isChecked = foldersFirst
                     applySort(sortMode)
+                    persistSort()
                     true
                 }
                 else -> false
             }
         }
+        binding.toolbar.menu.findItem(SortMode.menuId(sortMode))?.isChecked = true
+        binding.toolbar.menu.findItem(R.id.action_folders_first)?.isChecked = foldersFirst
         binding.toolbar.setNavigationOnClickListener { handleBack() }
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -630,7 +668,7 @@ class ApkBrowseActivity : AppCompatActivity() {
         content.findViewById<View>(R.id.action_share).isVisible = !entry.isDirectory
         content.findViewById<View>(R.id.action_info).isVisible = !entry.isDirectory
         content.findViewById<View>(R.id.action_save_to).isVisible = !entry.isDirectory
-        applySegmentCorners(content)
+        applySegmentCornersForEntrySheet(content)
         content.findViewById<View>(R.id.action_preview).setOnClickListener {
             dialog.dismiss()
             if (entry.isDirectory) openDirectory(entry.path) else showFile(entry)
@@ -665,47 +703,28 @@ class ApkBrowseActivity : AppCompatActivity() {
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     }
 
-    private fun applySegmentCorners(content: View) {
-        val rows = listOf(
-            content.findViewById<View>(R.id.action_preview),
-            content.findViewById<View>(R.id.action_save_to),
-            content.findViewById<View>(R.id.action_share),
-            content.findViewById<View>(R.id.action_info)
-        )
-        val dividers = listOf(
-            Triple(
-                content.findViewById<View>(R.id.divider_preview_save),
+    private fun persistSort() {
+        prefs.edit()
+            .putString(KEY_APK_SORT, SortMode.key(sortMode))
+            .putBoolean(AppPrefs.KEY_APK_FOLDERS_FIRST, foldersFirst)
+            .apply()
+    }
+
+    private fun applySegmentCornersForEntrySheet(content: View) {
+        applySegmentCorners(
+            content,
+            listOf(
                 R.id.action_preview,
-                R.id.action_save_to
-            ),
-            Triple(
-                content.findViewById<View>(R.id.divider_save_share),
                 R.id.action_save_to,
-                R.id.action_share
-            ),
-            Triple(
-                content.findViewById<View>(R.id.divider_share_info),
                 R.id.action_share,
                 R.id.action_info
+            ),
+            listOf(
+                R.id.divider_preview_save,
+                R.id.divider_save_share,
+                R.id.divider_share_info
             )
         )
-
-        val visible = rows.filter { it.isVisible }
-        val visibleIds = visible.map { it.id }.toSet()
-
-        visible.forEachIndexed { index, row ->
-            val backgroundRes = when {
-                visible.size == 1 -> R.drawable.bg_sheet_action_segment_single
-                index == 0 -> R.drawable.bg_sheet_action_segment_top
-                index == visible.lastIndex -> R.drawable.bg_sheet_action_segment_bottom
-                else -> R.drawable.bg_sheet_action_segment_middle
-            }
-            row.setBackgroundResource(backgroundRes)
-        }
-
-        dividers.forEach { (divider, aboveId, belowId) ->
-            divider.isVisible = aboveId in visibleIds && belowId in visibleIds
-        }
     }
 
     private fun copyEntryPath(entry: ApkEntry) {

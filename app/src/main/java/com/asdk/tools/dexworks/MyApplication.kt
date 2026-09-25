@@ -9,6 +9,8 @@ class MyApplication : Application() {
         super.onCreate()
 
         applyThemeFromPreferences(this)
-        DynamicColors.applyToActivitiesIfAvailable(this)
+        if (AppPrefs.dynamicColor(this)) {
+            DynamicColors.applyToActivitiesIfAvailable(this)
+        }
     }
 }

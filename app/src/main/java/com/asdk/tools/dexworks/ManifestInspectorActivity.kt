@@ -61,18 +61,19 @@ class ManifestInspectorActivity : AppCompatActivity() {
     }
 
     private fun setupCodeEditor() {
+        val ctx: Context = this
         binding.codeEditor.apply {
             setTypefaceText(Typeface.MONOSPACE)
             setTypefaceLineNumber(Typeface.MONOSPACE)
-            setTextSize(13f)
+            setTextSize(AppPrefs.codeTextSizeSp(ctx))
             setEditable(false)
-            setLineNumberEnabled(true)
+            setLineNumberEnabled(AppPrefs.codeLineNumbers(ctx))
             setScalable(true)
             val minPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 8f, resources.displayMetrics)
             val maxPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 32f, resources.displayMetrics)
             setScaleTextSizes(minPx, maxPx)
-            setPinLineNumber(true)
-            setWordwrap(false)
+            setPinLineNumber(AppPrefs.codeLineNumbers(ctx))
+            setWordwrap(AppPrefs.codeWordWrap(ctx))
             setHighlightCurrentLine(false)
 
             val isDarkMode = (resources.configuration.uiMode and

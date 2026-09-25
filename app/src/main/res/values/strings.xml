@@ -99,6 +99,12 @@
     <string name="viewer_save_to">Save to…</string>
     <string name="viewer_copy_image">Copy image</string>
     <string name="viewer_copy_text">Copy text</string>
+    <string name="viewer_unobfuscate">Unobfuscate</string>
+    <string name="viewer_prettify">Prettify</string>
+    <string name="viewer_transform_applied">%1$s applied</string>
+    <string name="viewer_no_changes">Nothing to change</string>
+    <string name="viewer_unobfuscate_summary">%1$d strings resolved from %2$d arrays, %3$d expressions folded</string>
+    <string name="viewer_details">Details</string>
     <string name="viewer_copied">Copied to clipboard</string>
     <string name="viewer_save_failed">Could not save this file</string>
     <string name="error_loading_image">Could not load this image</string>
@@ -262,6 +268,7 @@
     <string name="dialog_sdk_title">Android version</string>
     <string name="dialog_sdk_message">Version: %1$s\nName: %2$s\nCodename: %3$s</string>
     <string name="action_save_apk_to">Save APK to…</string>
+    <string name="action_import_as_project">Import as project…</string>
     <string name="dialog_remember_location_title">Remember this location?</string>
     <string name="dialog_remember_location_message">Do you want DexWorks to remember this directory as your default APK export location?</string>
     <string name="action_remember">Remember</string>
@@ -409,4 +416,72 @@
     <string name="filter_option_system">System</string>
     <string name="format_app_count">%1$d apps</string>
     <string name="format_app_count_single">1 app</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_cat_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_dialog">Pick theme</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_dynamic_color">Wallpaper colors</string>
+    <string name="settings_dynamic_color_summary">Match the app colors to your wallpaper</string>
+
+    <string name="settings_cat_code">Text and code</string>
+    <string name="settings_text_size">Text size</string>
+    <string name="settings_text_size_dialog">Pick text size</string>
+    <string name="settings_size_small">Small</string>
+    <string name="settings_size_normal">Normal</string>
+    <string name="settings_size_large">Large</string>
+    <string name="settings_line_numbers">Line numbers</string>
+    <string name="settings_line_numbers_summary">Show line numbers in text and code viewers</string>
+    <string name="settings_word_wrap">Word wrap</string>
+    <string name="settings_word_wrap_summary">Wrap long lines instead of scrolling sideways</string>
+
+    <string name="settings_cat_browsing">Browsing</string>
+    <string name="settings_app_sort">Sort apps by</string>
+    <string name="settings_app_sort_dialog">Sort apps by</string>
+    <string name="settings_sort_name">Name</string>
+    <string name="settings_sort_size">Size</string>
+    <string name="settings_sort_package">Package name</string>
+    <string name="settings_app_sort_ascending">Reverse sort order</string>
+    <string name="settings_app_sort_ascending_summary">Show the largest or last entries first</string>
+    <string name="settings_show_system_apps">Show system apps</string>
+    <string name="settings_show_system_apps_summary">Include pre-installed and system apps in the list</string>
+    <string name="settings_folders_first">Folders before files</string>
+    <string name="settings_folders_first_summary">Keep folders at the top when sorting an APK</string>
+
+    <string name="settings_cat_viewers">Viewers</string>
+    <string name="settings_hex_page">Hex page size</string>
+    <string name="settings_hex_page_dialog">Pick hex page size</string>
+    <string name="settings_page_1mb">1 MB per page</string>
+    <string name="settings_page_4mb">4 MB per page</string>
+    <string name="settings_page_8mb">8 MB per page</string>
+    <string name="settings_image_size">Maximum image size</string>
+    <string name="settings_image_size_dialog">Pick maximum image size</string>
+    <string name="settings_image_1024">1024 px</string>
+    <string name="settings_image_2048">2048 px</string>
+    <string name="settings_image_4096">4096 px</string>
+
+    <string name="settings_cat_saving">Saving</string>
+    <string name="settings_saved_folder">Remembered save folder</string>
+    <string name="settings_saved_folder_none">Not set, you will be asked each time</string>
+    <string name="settings_choose_folder">Choose folder</string>
+    <string name="settings_forget_folder">Forget folder</string>
+    <string name="settings_folder_chosen">Save folder updated</string>
+    <string name="settings_folder_forgotten">Save folder cleared</string>
+    <string name="settings_clear_cache">Clear cache</string>
+    <string name="settings_clear_cache_summary">Delete temporary files created while viewing</string>
+    <string name="settings_cache_cleared">Cache cleared</string>
+    <string name="settings_cache_failed">Could not clear the cache</string>
+
+    <string name="settings_cat_notifications">Notifications</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_summary">Tell me when a long running job finishes</string>
+
+    <string name="settings_cat_about">About</string>
+    <string name="settings_about">About DexWorks</string>
+    <string name="settings_about_version">Version %1$s</string>
+    <string name="settings_about_close">Close</string>
 </resources>

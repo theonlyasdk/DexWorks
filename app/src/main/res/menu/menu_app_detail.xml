@@ -13,4 +13,8 @@
         android:id="@+id/action_inspect_activities"
         android:title="@string/action_inspect_activities"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_import_as_project"
+        android:title="@string/action_import_as_project"
+        app:showAsAction="never" />
 </menu>

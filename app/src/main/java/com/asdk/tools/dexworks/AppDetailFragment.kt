@@ -30,7 +30,6 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.lifecycle.lifecycleScope
-import androidx.preference.PreferenceManager
 import com.asdk.tools.dexworks.databinding.FragmentAppDetailBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
@@ -605,8 +604,19 @@ class AppDetailFragment : Fragment() {
                 openInspector(ActivityInspectorActivity::createIntent)
                 return true
             }
+            R.id.action_import_as_project -> {
+                importAsProject()
+                return true
+            }
         }
         return false
+    }
+
+    private fun importAsProject() {
+        val pkg = packageInfo ?: return
+        if (actualApkPath.isBlank()) return
+        val appName = pkg.applicationInfo?.loadLabel(requireContext().packageManager)?.toString()?.ifBlank { pkg.packageName } ?: pkg.packageName
+        startActivity(ProjectWizardActivity.createIntent(requireContext(), actualApkPath, appName))
     }
 
     private fun openInspector(

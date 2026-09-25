@@ -2,6 +2,7 @@ package com.asdk.tools.dexworks
 
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.text.format.DateUtils
 import android.view.LayoutInflater
@@ -74,34 +75,54 @@ class ProjectsFragment : Fragment() {
         val cached = ProjectStore.getCachedProjects()
         if (cached != null) {
             showProjects(cached)
+        } else {
+            binding.layoutLoading.isVisible = true
+            binding.layoutEmptyState.isVisible = false
+            binding.recyclerProjects.isVisible = false
         }
 
+        val appContext = requireContext().applicationContext
         viewLifecycleOwner.lifecycleScope.launch {
-            val projects = withContext(Dispatchers.IO) {
-                ProjectStore.loadProjects(requireContext(), forceReload = true)
+            val (projects, icons) = withContext(Dispatchers.IO) {
+                val list = ProjectStore.loadProjects(appContext, forceReload = true)
+                val iconMap = mutableMapOf<String, Drawable>()
+                list.forEach { project ->
+                    val apkPath = project.apkPath
+                    if (project.useApkIcon && !apkPath.isNullOrBlank()) {
+                        runCatching {
+                            AppInfoUtils.getPackageArchiveInfo(appContext, apkPath)
+                                ?.applicationInfo
+                                ?.loadIcon(appContext.packageManager)
+                        }.getOrNull()?.let { iconMap[project.path] = it }
+                    }
+                }
+                list to iconMap
             }
             if (_binding != null) {
-                showProjects(projects)
+                binding.layoutLoading.isVisible = false
+                showProjects(projects, icons)
             }
         }
     }
 
     fun showEmpty() {
         _binding?.let {
+            it.layoutLoading.isVisible = false
             it.layoutEmptyState.isVisible = true
             it.recyclerProjects.isVisible = false
         }
     }
 
-    fun showProjects(projects: List<ProjectItem>) {
+    fun showProjects(projects: List<ProjectItem>, icons: Map<String, Drawable> = emptyMap()) {
         _binding?.let {
+            it.layoutLoading.isVisible = false
             if (projects.isEmpty()) {
                 showEmpty()
             } else {
                 it.layoutEmptyState.isVisible = false
                 it.recyclerProjects.isVisible = true
                 val sorted = sortProjects(projects)
-                projectAdapter.setItems(sorted)
+                projectAdapter.setItems(sorted, icons)
             }
         }
     }
@@ -135,9 +156,11 @@ class ProjectsFragment : Fragment() {
     ) : RecyclerView.Adapter<ProjectAdapter.ViewHolder>() {
 
         private var items: List<ProjectItem> = emptyList()
+        private var icons: Map<String, Drawable> = emptyMap()
 
-        fun setItems(newItems: List<ProjectItem>) {
+        fun setItems(newItems: List<ProjectItem>, newIcons: Map<String, Drawable> = emptyMap()) {
             items = newItems
+            icons = newIcons
             notifyDataSetChanged()
         }
 
@@ -150,17 +173,9 @@ class ProjectsFragment : Fragment() {
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val item = items[position]
-            val context = holder.itemView.context
-            val apkPath = item.apkPath
+            val apkIcon = if (item.useApkIcon) icons[item.path] else null
             holder.binding.textProjectName.text = item.name
             holder.binding.textProjectSubtitle.text = item.path
-            val apkIcon = if (item.useApkIcon && !apkPath.isNullOrBlank()) {
-                AppInfoUtils.getPackageArchiveInfo(context, apkPath)
-                    ?.applicationInfo
-                    ?.loadIcon(context.packageManager)
-            } else {
-                null
-            }
             if (apkIcon != null) {
                 holder.binding.imgProjectIcon.imageTintList = null
                 holder.binding.imgProjectIcon.setImageDrawable(apkIcon)

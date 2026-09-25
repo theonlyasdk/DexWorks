@@ -22,6 +22,7 @@ import androidx.lifecycle.lifecycleScope
 import com.asdk.tools.dexworks.databinding.ActivityApkXmlViewerBinding
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import io.github.rosemoe.sora.lang.EmptyLanguage
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,20 @@ class ApkXmlViewerActivity : AppCompatActivity() {
         const val EXTRA_APK_PATH = "extra_apk_path"
         const val EXTRA_ENTRY_PATH = "extra_entry_path"
 
+        private val ROW_IDS = listOf(
+            R.id.action_share,
+            R.id.action_save_to,
+            R.id.action_unobfuscate,
+            R.id.action_prettify,
+            R.id.action_copy
+        )
+        private val DIVIDER_IDS = listOf(
+            R.id.divider_share_save,
+            R.id.divider_save_unobfuscate,
+            R.id.divider_unobfuscate_prettify,
+            R.id.divider_prettify_copy
+        )
+
         fun createIntent(context: Context, apkPath: String, entryPath: String): Intent {
             return Intent(context, ApkXmlViewerActivity::class.java).apply {
                 putExtra(EXTRA_APK_PATH, apkPath)
@@ -48,6 +63,7 @@ class ApkXmlViewerActivity : AppCompatActivity() {
     private lateinit var fileSaveHelper: FileSaveHelper
     private lateinit var apkPath: String
     private lateinit var entryPath: String
+    private var currentText: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,7 +107,15 @@ class ApkXmlViewerActivity : AppCompatActivity() {
     private fun showActionsSheet() {
         val dialog = BottomSheetDialog(this)
         val content = layoutInflater.inflate(R.layout.sheet_viewer_actions, null)
+        val isJavaScript = viewerLanguage() == EntryLanguage.JAVASCRIPT
         content.findViewById<TextView>(R.id.text_copy_label).setText(R.string.viewer_copy_text)
+        content.findViewById<View>(R.id.action_unobfuscate).isVisible = isJavaScript
+        content.findViewById<View>(R.id.action_prettify).isVisible = isJavaScript
+        applySegmentCorners(
+            content,
+            ROW_IDS,
+            DIVIDER_IDS
+        )
         content.findViewById<View>(R.id.action_share).setOnClickListener {
             dialog.dismiss()
             shareEntry()
@@ -99,6 +123,14 @@ class ApkXmlViewerActivity : AppCompatActivity() {
         content.findViewById<View>(R.id.action_save_to).setOnClickListener {
             dialog.dismiss()
             saveEntry()
+        }
+        content.findViewById<View>(R.id.action_unobfuscate).setOnClickListener {
+            dialog.dismiss()
+            unobfuscateEntry()
+        }
+        content.findViewById<View>(R.id.action_prettify).setOnClickListener {
+            dialog.dismiss()
+            applyTransform(JsSourceTools::prettify, R.string.viewer_prettify)
         }
         content.findViewById<View>(R.id.action_copy).setOnClickListener {
             dialog.dismiss()
@@ -120,6 +152,72 @@ class ApkXmlViewerActivity : AppCompatActivity() {
         }
         dialog.show()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    }
+
+    private fun unobfuscateEntry() {
+        val source = currentText
+        if (source.isEmpty()) {
+            Snackbar.make(binding.root, R.string.error_loading_xml, Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        binding.layoutLoading.isVisible = true
+        lifecycleScope.launch {
+            val (result, report) = withContext(Dispatchers.Default) {
+                JsSourceTools.unobfuscateWithReport(source)
+            }
+            binding.layoutLoading.isVisible = false
+            if (result == source) {
+                Snackbar.make(
+                    binding.root,
+                    report.notes.firstOrNull() ?: getString(R.string.viewer_no_changes),
+                    Snackbar.LENGTH_LONG
+                ).show()
+                return@launch
+            }
+            currentText = result
+            binding.codeEditor.setText(result)
+            val summary = getString(
+                R.string.viewer_unobfuscate_summary,
+                report.referencesReplaced,
+                report.arraysResolved,
+                report.constantFolds
+            )
+            Snackbar.make(binding.root, summary, Snackbar.LENGTH_LONG)
+                .setAction(R.string.viewer_details) {
+                    MaterialAlertDialogBuilder(this@ApkXmlViewerActivity)
+                        .setTitle(R.string.viewer_unobfuscate)
+                        .setMessage(buildString {
+                            append(summary)
+                            if (report.notes.isNotEmpty()) {
+                                append("\n\n")
+                                report.notes.forEach { append("- $it\n") }
+                            }
+                        })
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                }
+                .show()
+        }
+    }
+
+    private fun applyTransform(transform: (String) -> String, labelRes: Int) {
+        val source = currentText
+        if (source.isEmpty()) {
+            Snackbar.make(binding.root, R.string.error_loading_xml, Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        val result = transform(source)
+        if (result == source) {
+            Snackbar.make(binding.root, R.string.viewer_no_changes, Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        currentText = result
+        binding.codeEditor.setText(result)
+        Snackbar.make(
+            binding.root,
+            getString(R.string.viewer_transform_applied, getString(labelRes)),
+            Snackbar.LENGTH_SHORT
+        ).show()
     }
 
     private fun shareEntry() {
@@ -180,18 +278,19 @@ class ApkXmlViewerActivity : AppCompatActivity() {
     }
 
     private fun setupCodeEditor() {
+        val ctx: Context = this
         binding.codeEditor.apply {
             setTypefaceText(Typeface.MONOSPACE)
             setTypefaceLineNumber(Typeface.MONOSPACE)
-            setTextSize(13f)
+            setTextSize(AppPrefs.codeTextSizeSp(ctx))
             setEditable(false)
-            setLineNumberEnabled(true)
+            setLineNumberEnabled(AppPrefs.codeLineNumbers(ctx))
             setScalable(true)
             val minPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 8f, resources.displayMetrics)
             val maxPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 32f, resources.displayMetrics)
             setScaleTextSizes(minPx, maxPx)
-            setPinLineNumber(true)
-            setWordwrap(false)
+            setPinLineNumber(AppPrefs.codeLineNumbers(ctx))
+            setWordwrap(AppPrefs.codeWordWrap(ctx))
             setHighlightCurrentLine(false)
             val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
                 Configuration.UI_MODE_NIGHT_YES
@@ -253,6 +352,7 @@ class ApkXmlViewerActivity : AppCompatActivity() {
             }
             binding.layoutLoading.isVisible = false
             result.onSuccess { content ->
+                currentText = content
                 binding.codeEditor.setText(content)
                 binding.codeEditor.isVisible = true
             }.onFailure { error ->

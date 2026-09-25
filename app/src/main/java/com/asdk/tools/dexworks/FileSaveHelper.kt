@@ -62,6 +62,7 @@ class FileSaveHelper(
     }
 
     private var pendingSaveAction: ((Uri) -> Unit)? = null
+    private var pendingFolderPick: Boolean = false
 
     private val selectFolderLauncher: ActivityResultLauncher<Uri?> = caller.registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -72,13 +73,30 @@ class FileSaveHelper(
             if (action != null) {
                 action(uri)
                 promptRememberLocation(uri)
+            } else if (pendingFolderPick) {
+                pendingFolderPick = false
+                rememberLocation(uri)
             }
         }
+    }
+
+    /**
+     * Lets the user pick a folder to remember for future saves without saving
+     * anything. Must be called from the registered caller's lifecycle, because
+     * the underlying launcher is registered at construction time.
+     */
+    fun pickRememberedFolder() {
+        pendingFolderPick = true
+        selectFolderLauncher.launch(null)
     }
 
     fun getRememberedLocation(): Uri? {
         val uriStr = getPreferences().getString(PREF_REMEMBERED_SAVE_LOCATION, null)
         return if (!uriStr.isNullOrBlank()) Uri.parse(uriStr) else null
+    }
+
+    fun forgetRememberedLocation() {
+        getPreferences().edit().remove(PREF_REMEMBERED_SAVE_LOCATION).apply()
     }
 
     fun saveApk(app: AppItem, forcePickLocation: Boolean = false) {
@@ -447,19 +465,24 @@ class FileSaveHelper(
             .setTitle(R.string.dialog_remember_location_title)
             .setMessage(R.string.dialog_remember_location_message)
             .setPositiveButton(R.string.action_remember) { _, _ ->
-                try {
-                    val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                    context.contentResolver.takePersistableUriPermission(treeUri, flags)
-                } catch (e: Exception) {
-                    // Ignore if cannot take persistable permission
-                }
-                getPreferences().edit()
-                    .putString(PREF_REMEMBERED_SAVE_LOCATION, treeUri.toString())
-                    .apply()
+                rememberLocation(treeUri)
             }
             .setNegativeButton(R.string.action_not_now, null)
             .show()
+    }
+
+    private fun rememberLocation(treeUri: Uri) {
+        val context = contextProvider()
+        try {
+            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            context.contentResolver.takePersistableUriPermission(treeUri, flags)
+        } catch (e: Exception) {
+            // Ignore if cannot take persistable permission
+        }
+        getPreferences().edit()
+            .putString(PREF_REMEMBERED_SAVE_LOCATION, treeUri.toString())
+            .apply()
     }
 
     private fun getPreferences(): SharedPreferences {

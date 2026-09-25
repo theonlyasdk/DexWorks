@@ -36,7 +36,7 @@ class ApkImageViewerActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_APK_PATH = "extra_apk_path"
         const val EXTRA_ENTRY_PATH = "extra_entry_path"
-        private const val MAX_DIMENSION = 2048
+        private const val MAX_DIMENSION_FALLBACK = 2048
         private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "webp", "gif", "bmp")
 
         fun createIntent(context: Context, apkPath: String, entryPath: String): Intent {
@@ -52,6 +52,7 @@ class ApkImageViewerActivity : AppCompatActivity() {
     private lateinit var apkPath: String
     private lateinit var entryPath: String
     private var imagePaths: List<String> = emptyList()
+    private var maxDimension: Int = MAX_DIMENSION_FALLBACK
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +69,7 @@ class ApkImageViewerActivity : AppCompatActivity() {
 
         apkPath = intent.getStringExtra(EXTRA_APK_PATH).orEmpty()
         entryPath = intent.getStringExtra(EXTRA_ENTRY_PATH).orEmpty()
+        maxDimension = AppPrefs.imageMaxSize(this)
         fileSaveHelper = FileSaveHelper.from(this)
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.toolbar.inflateMenu(R.menu.menu_viewer_actions)
@@ -261,7 +263,7 @@ class ApkImageViewerActivity : AppCompatActivity() {
         var sample = 1
         var w = bounds.outWidth
         var h = bounds.outHeight
-        while (w / (sample * 2) >= MAX_DIMENSION || h / (sample * 2) >= MAX_DIMENSION) {
+        while (w / (sample * 2) >= maxDimension || h / (sample * 2) >= maxDimension) {
             sample *= 2
         }
 

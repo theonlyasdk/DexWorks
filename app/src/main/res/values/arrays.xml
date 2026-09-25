@@ -1,8 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="theme_names">
-        <item>System</item>
-        <item>Light</item>
-        <item>Dark</item>
+        <item>@string/settings_theme_system</item>
+        <item>@string/settings_theme_light</item>
+        <item>@string/settings_theme_dark</item>
     </string-array>
     <string-array name="theme_values">
         <item>system</item>
@@ -11,9 +12,9 @@
     </string-array>
 
     <string-array name="code_size_names">
-        <item>Small</item>
-        <item>Normal</item>
-        <item>Large</item>
+        <item>@string/settings_size_small</item>
+        <item>@string/settings_size_normal</item>
+        <item>@string/settings_size_large</item>
     </string-array>
     <string-array name="code_size_values">
         <item>small</item>
@@ -21,25 +22,36 @@
         <item>large</item>
     </string-array>
 
-    <string-array name="save_to_names">
-        <item>App folder</item>
-        <item>Download folder</item>
-        <item>Ask each time</item>
+    <string-array name="app_sort_names">
+        <item>@string/settings_sort_name</item>
+        <item>@string/settings_sort_size</item>
+        <item>@string/settings_sort_package</item>
     </string-array>
-    <string-array name="save_to_values">
-        <item>app</item>
-        <item>download</item>
-        <item>ask</item>
+    <string-array name="app_sort_values">
+        <item>name</item>
+        <item>size</item>
+        <item>package</item>
     </string-array>
 
-    <string-array name="show_first_names">
-        <item>Recent files</item>
-        <item>Installed apps</item>
-        <item>File picker</item>
+    <string-array name="hex_page_names">
+        <item>@string/settings_page_1mb</item>
+        <item>@string/settings_page_4mb</item>
+        <item>@string/settings_page_8mb</item>
     </string-array>
-    <string-array name="show_first_values">
-        <item>recent</item>
-        <item>apps</item>
-        <item>picker</item>
+    <string-array name="hex_page_values">
+        <item>1</item>
+        <item>4</item>
+        <item>8</item>
+    </string-array>
+
+    <string-array name="image_size_names">
+        <item>@string/settings_image_1024</item>
+        <item>@string/settings_image_2048</item>
+        <item>@string/settings_image_4096</item>
+    </string-array>
+    <string-array name="image_size_values">
+        <item>1024</item>
+        <item>2048</item>
+        <item>4096</item>
     </string-array>
 </resources>

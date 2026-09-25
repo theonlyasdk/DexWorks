@@ -1,5 +1,6 @@
 package com.asdk.tools.dexworks
 
+import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.net.Uri
@@ -22,6 +23,18 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 class ProjectWizardActivity : AppCompatActivity() {
+
+    companion object {
+        const val EXTRA_APK_PATH = "extra_apk_path"
+        const val EXTRA_APP_NAME = "extra_app_name"
+
+        fun createIntent(context: Context, apkPath: String? = null, appName: String? = null): Intent {
+            return Intent(context, ProjectWizardActivity::class.java).apply {
+                if (!apkPath.isNullOrBlank()) putExtra(EXTRA_APK_PATH, apkPath)
+                if (!appName.isNullOrBlank()) putExtra(EXTRA_APP_NAME, appName)
+            }
+        }
+    }
 
     private lateinit var binding: ActivityProjectWizardBinding
     private var currentStep = 1
@@ -124,6 +137,29 @@ class ProjectWizardActivity : AppCompatActivity() {
         }
         binding.btnWizardBack.setOnClickListener { handleBack() }
         binding.btnWizardNext.setOnClickListener { onNext() }
+
+        val initialApkPath = intent.getStringExtra(EXTRA_APK_PATH)
+        val initialAppName = intent.getStringExtra(EXTRA_APP_NAME)
+        if (!initialApkPath.isNullOrBlank()) {
+            val file = File(initialApkPath)
+            if (file.exists()) {
+                selectedApkUri = Uri.fromFile(file)
+                selectedApkPreviewPath = initialApkPath
+                binding.textSelectedApk.text = getString(R.string.wizard_apk_selected, file.name)
+                val resolvedAppName = initialAppName ?: AppInfoUtils.getPackageArchiveInfo(applicationContext, initialApkPath)
+                    ?.applicationInfo
+                    ?.loadLabel(packageManager)
+                    ?.toString()
+                    ?.takeIf { it.isNotBlank() }
+                if (!resolvedAppName.isNullOrBlank()) {
+                    binding.editProjectName.setText(resolvedAppName)
+                }
+                useApkIcon = true
+                binding.checkboxUseApkIcon.isChecked = true
+                binding.btnChooseIcon.isEnabled = false
+                updateIconPreview()
+            }
+        }
 
         showStep(1)
     }

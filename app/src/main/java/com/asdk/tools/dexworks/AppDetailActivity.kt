@@ -66,6 +66,7 @@ class AppDetailActivity : AppCompatActivity() {
             menu.findItem(R.id.action_save_apk_to)?.isVisible = hasApkPath
             menu.findItem(R.id.action_inspect_manifest)?.isVisible = hasApkPath
             menu.findItem(R.id.action_inspect_activities)?.isVisible = hasApkPath
+            menu.findItem(R.id.action_import_as_project)?.isVisible = hasApkPath
         }
         return super.onPrepareOptionsMenu(menu)
     }

@@ -2,7 +2,6 @@ package com.asdk.tools.dexworks
 
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.preference.PreferenceManager
 
 fun applyTheme(themeValue: String?) {
     val mode = when (themeValue) {
@@ -14,7 +13,5 @@ fun applyTheme(themeValue: String?) {
 }
 
 fun applyThemeFromPreferences(context: Context) {
-    val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-    val themeValue = prefs.getString("theme", "system")
-    applyTheme(themeValue)
+    applyTheme(AppPrefs.theme(context))
 }

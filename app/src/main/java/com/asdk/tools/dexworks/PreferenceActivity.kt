@@ -28,7 +28,7 @@ class PreferenceActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
 
         supportActionBar?.apply {
-            title = "Settings"
+            title = getString(R.string.settings_title)
             setDisplayHomeAsUpEnabled(true)
             setDisplayShowHomeEnabled(true)
         }

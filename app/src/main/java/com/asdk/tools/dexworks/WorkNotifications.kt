@@ -8,7 +8,6 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.preference.PreferenceManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 object WorkNotifications {
@@ -34,8 +33,7 @@ object WorkNotifications {
     }
 
     fun areEnabled(context: Context): Boolean {
-        val prefsOn = PreferenceManager.getDefaultSharedPreferences(context)
-            .getBoolean("notifications", true)
+        val prefsOn = AppPrefs.notifications(context)
         if (!prefsOn) return false
         return NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
@@ -77,8 +75,7 @@ object WorkNotifications {
 
     fun maybeShowDisabledHint(context: Context) {
         if (hintShownThisSession) return
-        val prefsOn = PreferenceManager.getDefaultSharedPreferences(context)
-            .getBoolean("notifications", true)
+        val prefsOn = AppPrefs.notifications(context)
         if (!prefsOn) return
         if (NotificationManagerCompat.from(context).areNotificationsEnabled()) return
         hintShownThisSession = true

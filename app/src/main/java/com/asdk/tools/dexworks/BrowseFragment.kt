@@ -44,7 +44,21 @@ class BrowseFragment : Fragment() {
     enum class SortType(val titleResId: Int) {
         NAME(R.string.sort_by_name),
         SIZE(R.string.sort_by_size),
-        PACKAGE(R.string.sort_by_package)
+        PACKAGE(R.string.sort_by_package);
+
+        companion object {
+            fun fromKey(key: String?): SortType = when (key) {
+                "size" -> SIZE
+                "package" -> PACKAGE
+                else -> NAME
+            }
+
+            fun key(type: SortType): String = when (type) {
+                NAME -> "name"
+                SIZE -> "size"
+                PACKAGE -> "package"
+            }
+        }
     }
 
     enum class FilterOption(val titleResId: Int) {
@@ -107,8 +121,13 @@ class BrowseFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         preferences = PreferenceManager.getDefaultSharedPreferences(requireContext())
-        showSystemApps = preferences.getBoolean(PREF_SHOW_SYSTEM_APPS, false)
+        showSystemApps = AppPrefs.showSystemApps(requireContext())
         currentFilter = if (showSystemApps) FilterOption.ALL else FilterOption.USER
+        currentSortType = SortType.fromKey(preferences.getString(AppPrefs.KEY_APP_SORT_TYPE, null))
+        isSortAscending = preferences.getBoolean(
+            AppPrefs.KEY_APP_SORT_ASCENDING,
+            AppPrefs.DEFAULT_APP_SORT_ASCENDING
+        )
         preferences.registerOnSharedPreferenceChangeListener(prefsListener)
 
         binding.btnSort.setOnClickListener { showSortMenu(it) }
@@ -396,9 +415,17 @@ class BrowseFragment : Fragment() {
                 isSortAscending = (selected != SortType.SIZE)
             }
             applyDisplayFilter(preserveSelection = isSelectionMode)
+            persistSort()
             true
         }
         popup.show()
+    }
+
+    private fun persistSort() {
+        preferences.edit()
+            .putString(AppPrefs.KEY_APP_SORT_TYPE, SortType.key(currentSortType))
+            .putBoolean(AppPrefs.KEY_APP_SORT_ASCENDING, isSortAscending)
+            .apply()
     }
 
     private fun showFilterMenu(anchor: View) {
@@ -582,8 +609,7 @@ class BrowseFragment : Fragment() {
     }
 
     companion object {
-        private const val PREF_SHOW_SYSTEM_APPS = "show_system_apps"
-        private const val PREF_REMEMBERED_SAVE_LOCATION = "remembered_apk_save_location"
+        private const val PREF_SHOW_SYSTEM_APPS = AppPrefs.KEY_SHOW_SYSTEM_APPS
     }
 
     class AppAdapter(
@@ -704,6 +730,7 @@ class BrowseFragment : Fragment() {
                 popup.menu.add(0, 2, 1, R.string.action_open_app)
                 popup.menu.add(0, 3, 2, R.string.action_app_info)
                 popup.menu.add(0, 4, 3, R.string.action_save_apk_to)
+                popup.menu.add(0, 5, 4, R.string.action_import_as_project)
                 popup.setOnMenuItemClickListener { menuItem ->
                     when (menuItem.itemId) {
                         1 -> {
@@ -733,6 +760,16 @@ class BrowseFragment : Fragment() {
                         }
                         4 -> {
                             onSaveApkToClick(item)
+                            true
+                        }
+                        5 -> {
+                            v.context.startActivity(
+                                ProjectWizardActivity.createIntent(
+                                    context = v.context,
+                                    apkPath = item.sourceDir,
+                                    appName = item.name
+                                )
+                            )
                             true
                         }
                         else -> false
