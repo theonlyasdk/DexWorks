@@ -7,8 +7,6 @@ import android.os.SystemClock
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.asdk.tools.dexworks.databinding.ActivityDecompileBinding
@@ -74,7 +72,7 @@ class DecompileActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        
         binding = ActivityDecompileBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

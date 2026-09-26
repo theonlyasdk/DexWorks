@@ -17,8 +17,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.transition.ChangeBounds
@@ -40,6 +38,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.math.sqrt
+import com.asdk.tools.dexworks.AppInfoUtils.dp
 
 class VibrationTestActivity : AppCompatActivity() {
 
@@ -94,15 +93,9 @@ class VibrationTestActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         binding = ActivityVibrationTestBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        ViewCompat.setOnApplyWindowInsetsListener(binding.layoutMainContent) { v, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(bars.left, bars.top, bars.right, 0)
-            insets
-        }
+        enableEdgeToEdgeWithPadding(binding.layoutMainContent)
         val bottomSheetBehavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(binding.bottomSheetVisualizer)
         bottomSheetBehavior.isHideable = false
         bottomSheetBehavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED
@@ -111,7 +104,7 @@ class VibrationTestActivity : AppCompatActivity() {
             val rootH = binding.root.height
             if (rootH <= 0) return
             val coveredH = (rootH - sheet.top).coerceAtLeast(0)
-            val basePadding = (16 * resources.displayMetrics.density).toInt()
+            val basePadding = 16.dp()
             binding.containerScrollContent.setPadding(
                 binding.containerScrollContent.paddingLeft,
                 binding.containerScrollContent.paddingTop,
@@ -130,14 +123,8 @@ class VibrationTestActivity : AppCompatActivity() {
             }
         })
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.bottomSheetVisualizer) { v, insets ->
-            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(bars.left, 0, bars.right, bars.bottom)
-            bottomSheetBehavior.peekHeight = (96 * resources.displayMetrics.density).toInt() + bars.bottom
-            v.post { updateScrollContentPadding(v) }
-            insets
-        }
-        ViewCompat.requestApplyInsets(binding.root)
+        // bottomSheetVisualizer insets handled by enableEdgeToEdgeWithPadding on layoutMainContent
+        // bottomSheetBehavior.peekHeight adjusted in updateScrollContentPadding
 
         binding.toolbar.setNavigationOnClickListener { finish() }
 

@@ -63,6 +63,17 @@
                     tools:text="1" />
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_selection_delete"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:visibility="gone"
+                    android:text="@string/project_action_delete"
+                    app:icon="@drawable/ic_delete"
+                    app:iconPadding="6dp" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_selection_zip"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"

@@ -6,13 +6,9 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import com.asdk.tools.dexworks.databinding.ActivityProjectOptionsBinding
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -46,18 +42,9 @@ class ProjectOptionsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         binding = ActivityProjectOptionsBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
-            val systemBars = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()
-            )
-            view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-        ViewCompat.requestApplyInsets(binding.root)
+        enableEdgeToEdgeWithPadding(binding.root)
 
         projectName = intent.getStringExtra(EXTRA_PROJECT_NAME).orEmpty()
         projectPath = intent.getStringExtra(EXTRA_PROJECT_PATH).orEmpty()
@@ -153,31 +140,6 @@ class ProjectOptionsActivity : AppCompatActivity() {
             }
             ProjectActions.ACTION_DELETE -> confirmDeleteProject()
         }
-    }
-
-    private fun confirmDeleteProject() {
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.project_delete_title)
-            .setMessage(getString(R.string.project_delete_message, projectName))
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.project_delete_confirm) { _, _ ->
-                lifecycleScope.launch {
-                    val deleted = withContext(Dispatchers.IO) {
-                        ProjectStore.deleteProject(applicationContext, projectPath)
-                    }
-                    if (isFinishing || isDestroyed) return@launch
-                    if (deleted) {
-                        finish()
-                    } else {
-                        Snackbar.make(
-                            binding.root,
-                            R.string.project_delete_failed,
-                            Snackbar.LENGTH_LONG
-                        ).show()
-                    }
-                }
-            }
-            .show()
     }
 
     private fun setupCard(card: View, enabled: Boolean, onClick: () -> Unit) {

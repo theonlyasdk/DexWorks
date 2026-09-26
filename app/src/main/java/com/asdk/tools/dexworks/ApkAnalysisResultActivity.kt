@@ -6,8 +6,6 @@ import android.os.Bundle
 import android.text.format.Formatter
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.asdk.tools.dexworks.databinding.ActivityApkAnalysisResultBinding
@@ -49,7 +47,7 @@ class ApkAnalysisResultActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        
         binding = ActivityApkAnalysisResultBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

@@ -116,6 +116,18 @@ object ProjectStore {
         return loadProjects(context).firstOrNull { it.name.equals(name, ignoreCase = true) }
     }
 
+    /**
+     * Resolves the actual APK file for a project, trying in order:
+     * 1. The stored apkPath (if valid file)
+     * 2. project.apk inside the project directory
+     * 3. The project path itself if it's an APK file
+     */
+    fun resolveApkPath(context: Context, project: ProjectItem): String? {
+        return project.apkPath?.takeIf { File(it).isFile }
+            ?: File(project.path, APK_FILE_NAME).takeIf { it.isFile }?.absolutePath
+            ?: project.path.takeIf { File(it).isFile && it.endsWith(".apk", ignoreCase = true) }
+    }
+
     fun loadProjects(context: Context, forceReload: Boolean = false): List<ProjectItem> {
         if (!forceReload && cachedProjects != null) {
             return cachedProjects!!
@@ -242,6 +254,38 @@ object ProjectStore {
         } catch (e: Exception) {
             false
         }
+    }
+
+    /**
+     * Batch deletes projects: removes directories inside the projects folder,
+     * then saves remaining project entries in a single write.
+     * Callers must invoke this off the main thread.
+     */
+    fun deleteProjects(context: Context, paths: Set<String>): Int {
+        if (paths.isEmpty()) return 0
+        val root = File(context.filesDir, PROJECTS_DIRECTORY)
+        var deletedCount = 0
+        for (path in paths) {
+            if (path.isBlank()) continue
+            try {
+                val target = File(path)
+                val inside = try {
+                    target.canonicalPath == root.canonicalPath ||
+                        target.canonicalPath.startsWith(root.canonicalPath + File.separator)
+                } catch (e: Exception) {
+                    false
+                }
+                if (inside) {
+                    target.deleteRecursively()
+                }
+                deletedCount++
+            } catch (e: Exception) {
+                // Ignore and continue
+            }
+        }
+        val remaining = loadProjects(context).filterNot { paths.contains(it.path) }
+        saveProjects(context, remaining)
+        return deletedCount
     }
 
     private fun saveProjects(context: Context, projects: List<ProjectItem>): Boolean {

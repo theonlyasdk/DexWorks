@@ -12,9 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.core.widget.addTextChangedListener
@@ -47,14 +45,13 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        enableEdgeToEdge()
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        enableEdgeToEdgeWithPadding(binding.topBarContainer)
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
-
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.topBarContainer) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -242,11 +239,23 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    fun showSelectionBar(count: Int, onBack: () -> Unit, onZip: () -> Unit) {
+    fun showSelectionBar(
+        count: Int,
+        onBack: () -> Unit,
+        onZip: (() -> Unit)? = null,
+        onDelete: (() -> Unit)? = null
+    ) {
         val alreadyShowing = binding.layoutSelectionTopBar.visibility == View.VISIBLE
         binding.textSelectionTitle.text = count.toString()
         binding.btnSelectionBack.setOnClickListener { onBack() }
-        binding.btnSelectionZip.setOnClickListener { onZip() }
+        binding.btnSelectionZip.isVisible = onZip != null
+        if (onZip != null) {
+            binding.btnSelectionZip.setOnClickListener { onZip() }
+        }
+        binding.btnSelectionDelete.isVisible = onDelete != null
+        if (onDelete != null) {
+            binding.btnSelectionDelete.setOnClickListener { onDelete() }
+        }
         binding.viewPager.isUserInputEnabled = false
 
         if (!alreadyShowing) {

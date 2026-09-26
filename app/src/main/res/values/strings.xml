@@ -689,6 +689,9 @@
     <string name="project_delete_confirm">Delete</string>
     <string name="project_deleted">Deleted “%1$s”.</string>
     <string name="project_delete_failed">Could not delete this project.</string>
+    <string name="projects_delete_multiple_title">Delete projects?</string>
+    <string name="projects_delete_multiple_message">Permanently remove %1$d selected projects and all their files?</string>
+    <string name="projects_deleted_multiple">Deleted %1$d projects.</string>
     <string name="project_exists_title">Project already exists</string>
     <string name="project_exists_message">A project called “%1$s” is already in your projects. Open the existing one, or create a second copy?</string>
     <string name="project_exists_open">Open existing</string>

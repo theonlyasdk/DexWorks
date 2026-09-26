@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.asdk.tools.dexworks.databinding.ActivityProjectIconPickerBinding
 import com.asdk.tools.dexworks.databinding.ItemProjectIconBinding
 import com.google.android.material.color.MaterialColors
+import com.asdk.tools.dexworks.AppInfoUtils.dp
 
 class ProjectIconPickerActivity : AppCompatActivity() {
 
@@ -140,7 +141,7 @@ class ProjectIconPickerActivity : AppCompatActivity() {
                 )
             )
             holder.binding.cardProjectIcon.strokeWidth = if (isSelected) {
-                (2 * context.resources.displayMetrics.density).toInt()
+                context.dp(2)
             } else {
                 0
             }

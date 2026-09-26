@@ -220,7 +220,7 @@ class ManifestInspectorActivity : AppCompatActivity() {
 
         val layout = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            val pad = (20 * resources.displayMetrics.density).toInt()
+            val pad = 20.dp()
             setPadding(pad, pad / 2, pad, pad / 2)
         }
 
@@ -240,7 +240,7 @@ class ManifestInspectorActivity : AppCompatActivity() {
         }
         val endLayout = com.google.android.material.textfield.TextInputLayout(this).apply {
             addView(endInput)
-            val topMargin = (8 * resources.displayMetrics.density).toInt()
+            val topMargin = 8.dp()
             val lp = android.widget.LinearLayout.LayoutParams(
                 android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
                 android.widget.LinearLayout.LayoutParams.WRAP_CONTENT

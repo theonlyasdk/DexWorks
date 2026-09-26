@@ -15,8 +15,6 @@ import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.asdk.tools.dexworks.databinding.ActivitySourceViewerBinding
@@ -50,7 +48,7 @@ class SourceViewerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        
         binding = ActivitySourceViewerBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

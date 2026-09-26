@@ -2,31 +2,53 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/layout_item_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:clickable="true"
     android:focusable="true"
-    android:background="?attr/selectableItemBackground"
-    android:paddingHorizontal="16dp"
-    android:paddingVertical="12dp">
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginVertical="2dp"
+    android:background="@drawable/bg_item_browse_unselected"
+    android:paddingHorizontal="12dp"
+    android:paddingVertical="10dp">
 
-    <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/img_project_icon"
+    <FrameLayout
+        android:id="@+id/container_project_icon"
         android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:scaleType="centerInside"
-        android:src="@drawable/ic_folder_open"
-        app:tint="?attr/colorPrimary"
-        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium"
-        android:contentDescription="@null" />
+        android:layout_height="48dp">
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/img_project_icon"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_folder_open"
+            app:tint="?attr/colorPrimary"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium"
+            android:contentDescription="@null" />
+
+        <ImageView
+            android:id="@+id/icon_check_badge"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_avatar_check_badge"
+            android:src="@drawable/ic_check"
+            app:tint="?attr/colorOnSecondary"
+            android:scaleType="center"
+            android:visibility="gone"
+            tools:visibility="visible"
+            android:contentDescription="@null" />
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:layout_marginStart="16dp"
+        android:layout_marginEnd="8dp"
         android:orientation="vertical">
 
         <TextView

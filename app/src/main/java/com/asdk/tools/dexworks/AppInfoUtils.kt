@@ -364,4 +364,11 @@ object AppInfoUtils {
         }
     }
 }
-
+ 
+    /**
+     * Converts dp to pixels using the system display metrics.
+     * Centralized here so every call site shares one implementation.
+     */
+    fun Context.dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+    fun Context.dp(value: Float): Float = value * resources.displayMetrics.density
+}

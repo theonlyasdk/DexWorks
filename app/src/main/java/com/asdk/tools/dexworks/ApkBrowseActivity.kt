@@ -620,7 +620,6 @@ class ApkBrowseActivity : AppCompatActivity() {
     private fun typeSortKey(entry: ApkEntry): String =
         getString(ApkEntryReader.typeLabelRes(entry)).lowercase()
 
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun applySort(mode: SortMode) {
         sortMode = mode

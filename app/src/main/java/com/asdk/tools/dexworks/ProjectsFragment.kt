@@ -7,8 +7,14 @@ import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
+import android.widget.ImageButton
+import android.widget.ImageView
+import androidx.activity.OnBackPressedCallback
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -66,10 +72,39 @@ class ProjectsFragment : Fragment() {
     private var _binding: FragmentProjectsBinding? = null
     private val binding get() = _binding!!
 
+    private val selectedProjectPaths = mutableSetOf<String>()
+    private val originalSelectedBeforeDrag = mutableSetOf<String>()
+    private var isSelectionMode = false
+    private var backPressedCallback: OnBackPressedCallback? = null
+    private var dragSelectTouchListener: DragSelectTouchListener? = null
+
     private val projectAdapter = ProjectAdapter(
-        onItemClick = { project -> openProjectDetails(project) },
-        onItemLongClick = { project, anchor -> showProjectActionsSheet(project, anchor) },
-        onItemMenuClick = { project, anchor -> showProjectActionsMenu(project, anchor) }
+        onItemClick = { project ->
+            if (isSelectionMode) {
+                toggleProjectSelection(project)
+            } else {
+                openProjectDetails(project)
+            }
+        },
+        onItemLongClick = { project, position ->
+            if (!isSelectionMode) {
+                enterSelectionMode(project)
+            } else {
+                if (!selectedProjectPaths.contains(project.path)) {
+                    selectedProjectPaths.add(project.path)
+                    updateSelectionUI()
+                }
+            }
+            originalSelectedBeforeDrag.clear()
+            originalSelectedBeforeDrag.addAll(selectedProjectPaths)
+            dragSelectTouchListener?.startDragSelection(position)
+        },
+        onAvatarClick = { project ->
+            enterSelectionMode(project)
+        },
+        onItemMenuClick = { project, anchor ->
+            showProjectActionsMenu(project, anchor)
+        }
     )
 
     private var pendingOpenProjectPath: String? = null
@@ -97,6 +132,35 @@ class ProjectsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.recyclerProjects.adapter = projectAdapter
+
+        val listener = DragSelectTouchListener(
+            onSelectRange = { startPos, endPos ->
+                val minPos = minOf(startPos, endPos).coerceAtLeast(0)
+                val maxPos = maxOf(startPos, endPos).coerceAtMost(projectAdapter.itemCount - 1)
+                selectedProjectPaths.clear()
+                selectedProjectPaths.addAll(originalSelectedBeforeDrag)
+                for (i in minPos..maxPos) {
+                    projectAdapter.currentList.getOrNull(i)?.item?.path?.let { selectedProjectPaths.add(it) }
+                }
+                updateSelectionUI(duringDrag = true)
+            },
+            onDragEnded = {
+                updateSelectionUI(duringDrag = false)
+            }
+        )
+        listener.attachToRecyclerView(binding.recyclerProjects)
+        dragSelectTouchListener = listener
+
+        backPressedCallback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                exitSelectionMode()
+            }
+        }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback!!)
+
+        binding.btnSelectAllContainer.setOnClickListener {
+            toggleSelectAll()
+        }
 
         binding.btnOpenFile.setOnClickListener {
             Snackbar.make(binding.root, R.string.not_yet_implemented, Snackbar.LENGTH_SHORT).show()
@@ -141,6 +205,7 @@ class ProjectsFragment : Fragment() {
             }
             if (_binding == null) return@launch
             if (rows.isEmpty()) {
+                exitSelectionMode()
                 showEmpty()
             } else {
                 _binding?.let {
@@ -148,11 +213,146 @@ class ProjectsFragment : Fragment() {
                     it.layoutEmptyState.isVisible = false
                     it.recyclerProjects.isVisible = true
                     projectAdapter.submitList(rows) {
-                        if (_binding != null) openPendingProject(rows.map { row -> row.item })
+                        if (_binding != null) {
+                            openPendingProject(rows.map { row -> row.item })
+                            if (isSelectionMode) {
+                                val existingPaths = rows.map { r -> r.item.path }.toSet()
+                                selectedProjectPaths.retainAll(existingPaths)
+                                if (selectedProjectPaths.isEmpty()) {
+                                    exitSelectionMode()
+                                } else {
+                                    updateSelectionUI()
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+
+    private fun enterSelectionMode(initialProject: ProjectItem) {
+        if (!isSelectionMode) {
+            isSelectionMode = true
+            selectedProjectPaths.clear()
+            selectedProjectPaths.add(initialProject.path)
+            backPressedCallback?.isEnabled = true
+            (activity as? MainActivity)?.showSelectionBar(
+                count = selectedProjectPaths.size,
+                onBack = { exitSelectionMode() },
+                onDelete = { confirmDeleteSelectedProjects() }
+            )
+            updateSelectionUI()
+        }
+    }
+
+    private fun exitSelectionMode() {
+        if (isSelectionMode) {
+            isSelectionMode = false
+            selectedProjectPaths.clear()
+            backPressedCallback?.isEnabled = false
+            (activity as? MainActivity)?.hideSelectionBar()
+            updateSelectionUI()
+        }
+    }
+
+    private fun toggleProjectSelection(project: ProjectItem) {
+        if (selectedProjectPaths.contains(project.path)) {
+            selectedProjectPaths.remove(project.path)
+        } else {
+            selectedProjectPaths.add(project.path)
+        }
+        if (selectedProjectPaths.isEmpty()) {
+            exitSelectionMode()
+        } else {
+            updateSelectionUI()
+        }
+    }
+
+    private fun toggleSelectAll() {
+        val total = projectAdapter.itemCount
+        if (selectedProjectPaths.size == total && total > 0) {
+            selectedProjectPaths.clear()
+            exitSelectionMode()
+        } else {
+            selectedProjectPaths.clear()
+            for (i in 0 until total) {
+                projectAdapter.currentList.getOrNull(i)?.item?.path?.let { selectedProjectPaths.add(it) }
+            }
+            updateSelectionUI()
+        }
+    }
+
+    private fun updateSelectionUI(duringDrag: Boolean = false) {
+        if (isSelectionMode) {
+            binding.fabAddProject.hide()
+            if (binding.layoutSelectAllHeader.visibility != View.VISIBLE) {
+                binding.layoutSelectAllHeader.animate().cancel()
+                binding.layoutSelectAllHeader.alpha = 0f
+                binding.layoutSelectAllHeader.translationY = -8f * resources.displayMetrics.density
+                binding.layoutSelectAllHeader.visibility = View.VISIBLE
+                binding.layoutSelectAllHeader.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setDuration(200)
+                    .setInterpolator(FastOutSlowInInterpolator())
+                    .start()
+            }
+            val count = selectedProjectPaths.size
+            val total = projectAdapter.itemCount
+            val allSelected = count == total && total > 0
+            binding.checkboxSelectAll.isChecked = allSelected
+            binding.textSelectAll.text = if (allSelected) {
+                getString(R.string.action_deselect_all)
+            } else {
+                getString(R.string.action_select_all)
+            }
+            (activity as? MainActivity)?.updateSelectionCount(count)
+        } else {
+            binding.fabAddProject.show()
+            if (binding.layoutSelectAllHeader.visibility == View.VISIBLE) {
+                binding.layoutSelectAllHeader.animate().cancel()
+                binding.layoutSelectAllHeader.animate()
+                    .alpha(0f)
+                    .translationY(-8f * resources.displayMetrics.density)
+                    .setDuration(150)
+                    .withEndAction {
+                        binding.layoutSelectAllHeader.visibility = View.GONE
+                        binding.layoutSelectAllHeader.translationY = 0f
+                    }
+                    .start()
+            } else {
+                binding.layoutSelectAllHeader.visibility = View.GONE
+            }
+        }
+        projectAdapter.updateSelection(selectedProjectPaths, isSelectionMode)
+    }
+
+    private fun confirmDeleteSelectedProjects() {
+        val count = selectedProjectPaths.size
+        if (count == 0) return
+        val context = requireContext()
+        val pathsToDelete = HashSet(selectedProjectPaths)
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.projects_delete_multiple_title)
+            .setMessage(getString(R.string.projects_delete_multiple_message, count))
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.project_delete_confirm) { _, _ ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val deletedCount = withContext(Dispatchers.IO) {
+                        ProjectStore.deleteProjects(context.applicationContext, pathsToDelete)
+                    }
+                    if (!isAdded || _binding == null) return@launch
+                    exitSelectionMode()
+                    loadProjects()
+                    Snackbar.make(
+                        binding.root,
+                        getString(R.string.projects_deleted_multiple, deletedCount),
+                        Snackbar.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            .show()
     }
 
     private fun showLoading() {
@@ -160,6 +360,7 @@ class ProjectsFragment : Fragment() {
             it.layoutLoading.isVisible = true
             it.layoutEmptyState.isVisible = false
             it.recyclerProjects.isVisible = false
+            it.layoutSelectAllHeader.isVisible = false
         }
     }
 
@@ -168,6 +369,7 @@ class ProjectsFragment : Fragment() {
             it.layoutLoading.isVisible = false
             it.layoutEmptyState.isVisible = true
             it.recyclerProjects.isVisible = false
+            it.layoutSelectAllHeader.isVisible = false
         }
     }
 
@@ -179,19 +381,13 @@ class ProjectsFragment : Fragment() {
         openProjectDetails(target)
     }
 
-    private fun showProjectActionsSheet(project: ProjectItem, anchor: View) {
-        ProjectActions.showSheet(requireContext(), anchor, project.name) { actionId ->
-            runProjectAction(project, actionId)
-        }
-    }
-
     private fun showProjectActionsMenu(project: ProjectItem, anchor: View) {
         ProjectActions.showMenu(requireContext(), anchor) { actionId ->
             runProjectAction(project, actionId)
         }
     }
 
-    /** Runs a project action, shared by the long-press sheet and the options overflow. */
+    /** Runs a project action, shared by the options overflow. */
     fun runProjectAction(project: ProjectItem, actionId: Int) {
         val apk = resolveApkFor(project)
         val root = _binding?.root ?: return
@@ -241,37 +437,6 @@ class ProjectsFragment : Fragment() {
         }
     }
 
-    private fun confirmDeleteProject(project: ProjectItem) {
-        val context = requireContext()
-        MaterialAlertDialogBuilder(context)
-            .setTitle(R.string.project_delete_title)
-            .setMessage(getString(R.string.project_delete_message, project.name))
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(R.string.project_delete_confirm) { _, _ ->
-                viewLifecycleOwner.lifecycleScope.launch {
-                    val deleted = withContext(Dispatchers.IO) {
-                        ProjectStore.deleteProject(context.applicationContext, project.path)
-                    }
-                    if (!isAdded || _binding == null) return@launch
-                    if (deleted) {
-                        loadProjects()
-                        Snackbar.make(
-                            binding.root,
-                            getString(R.string.project_deleted, project.name),
-                            Snackbar.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        Snackbar.make(
-                            binding.root,
-                            R.string.project_delete_failed,
-                            Snackbar.LENGTH_LONG
-                        ).show()
-                    }
-                }
-            }
-            .show()
-    }
-
     private fun openProjectDetails(project: ProjectItem) {
         val apk = resolveApkFor(project)
         startActivity(
@@ -285,6 +450,13 @@ class ProjectsFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        if (isSelectionMode) {
+            (activity as? MainActivity)?.hideSelectionBar()
+        }
+        dragSelectTouchListener?.stopDrag()
+        dragSelectTouchListener = null
+        backPressedCallback?.remove()
+        backPressedCallback = null
         loadJob?.cancel()
         loadJob = null
         super.onDestroyView()
@@ -293,7 +465,8 @@ class ProjectsFragment : Fragment() {
 
     private class ProjectAdapter(
         private val onItemClick: (ProjectItem) -> Unit,
-        private val onItemLongClick: (ProjectItem, View) -> Unit,
+        private val onItemLongClick: (ProjectItem, Int) -> Unit,
+        private val onAvatarClick: (ProjectItem) -> Unit,
         private val onItemMenuClick: (ProjectItem, View) -> Unit
     ) : ListAdapter<ProjectRow, ProjectAdapter.ViewHolder>(DIFF) {
 
@@ -307,16 +480,41 @@ class ProjectsFragment : Fragment() {
             }
         }
 
+        private var selectedPaths: Set<String> = emptySet()
+        private var isSelectionMode: Boolean = false
+
+        fun updateSelection(selected: Set<String>, selectionMode: Boolean) {
+            if (selectedPaths == selected && isSelectionMode == selectionMode) return
+            val previous = selectedPaths
+            selectedPaths = HashSet(selected)
+            isSelectionMode = selectionMode
+            if (currentList.isEmpty()) {
+                notifyDataSetChanged()
+                return
+            }
+            val flipped = currentList.indices.filter { index ->
+                val path = currentList[index].item.path
+                (path in previous) != (path in selectedPaths) ||
+                    (path in selectedPaths) && isSelectionMode
+            }
+            if (flipped.isEmpty()) notifyDataSetChanged() else flipped.forEach { notifyItemChanged(it) }
+        }
+
         val iconLoader = ProjectIconLoader()
 
-        class ViewHolder(val binding: ItemProjectBinding) : RecyclerView.ViewHolder(binding.root)
+        class ViewHolder(val binding: ItemProjectBinding) : RecyclerView.ViewHolder(binding.root) {
+            val iconContainer: View = binding.containerProjectIcon
+            val iconView: ImageView = binding.imgProjectIcon
+            val checkBadge: ImageView = binding.iconCheckBadge
+            val menuButton: ImageButton = binding.btnProjectMenu
+            var currentPath: String? = null
+            var wasSelected: Boolean? = null
+        }
 
         private var iconTint: ColorStateList? = null
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             val binding = ItemProjectBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-            // Resolved once instead of allocating a ColorStateList and doing a theme
-            // lookup on every single bind.
             if (iconTint == null) {
                 iconTint = ColorStateList.valueOf(
                     MaterialColors.getColor(binding.imgProjectIcon, androidx.appcompat.R.attr.colorPrimary)
@@ -325,13 +523,24 @@ class ProjectsFragment : Fragment() {
             return ViewHolder(binding)
         }
 
+        override fun onViewRecycled(holder: ViewHolder) {
+            super.onViewRecycled(holder)
+            holder.iconView.animate().cancel()
+            holder.checkBadge.animate().cancel()
+            holder.iconView.rotationY = 0f
+            holder.checkBadge.rotationY = 0f
+            holder.wasSelected = null
+            holder.currentPath = null
+        }
+
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val row = getItem(position)
             val item = row.item
+            val isSelected = selectedPaths.contains(item.path)
+
             holder.binding.textProjectName.text = item.name
             holder.binding.textProjectSubtitle.text = item.path
-            // The APK path was resolved on IO during load, so binding performs no
-            // file stats here. Icon decoding itself already runs on IO.
+
             if (item.useApkIcon) {
                 iconLoader.load(
                     row.apkPath,
@@ -348,15 +557,125 @@ class ProjectsFragment : Fragment() {
 
             holder.binding.textProjectDate.text = row.dateText
 
+            val isPathChanged = holder.currentPath != item.path
+            holder.currentPath = item.path
+
+            if (isSelected) {
+                holder.itemView.setBackgroundResource(R.drawable.bg_item_browse_selected)
+            } else {
+                holder.itemView.setBackgroundResource(R.drawable.bg_item_browse_unselected)
+            }
+
+            val shouldAnimateFlip = !isPathChanged && holder.wasSelected != null && holder.wasSelected != isSelected
+            holder.wasSelected = isSelected
+
+            if (shouldAnimateFlip) {
+                animateIconFlip(holder, isSelected)
+            } else {
+                resetIconState(holder, isSelected)
+            }
+
+            holder.menuButton.isVisible = !isSelectionMode
+            holder.itemView.isActivated = isSelected
+
             holder.itemView.setOnClickListener {
                 onItemClick(item)
             }
+
+            holder.iconContainer.setOnClickListener {
+                if (!isSelectionMode) {
+                    onAvatarClick(item)
+                } else {
+                    onItemClick(item)
+                }
+            }
+
+            holder.itemView.setOnLongClickListener {
+                val pos = holder.bindingAdapterPosition
+                if (pos != RecyclerView.NO_POSITION) {
+                    onItemLongClick(item, pos)
+                }
+                true
+            }
+
+            holder.iconContainer.setOnLongClickListener {
+                val pos = holder.bindingAdapterPosition
+                if (pos != RecyclerView.NO_POSITION) {
+                    onItemLongClick(item, pos)
+                }
+                true
+            }
+
             holder.binding.btnProjectMenu.setOnClickListener {
                 onItemMenuClick(item, it)
             }
-            holder.itemView.setOnLongClickListener {
-                onItemLongClick(item, holder.itemView)
-                true
+        }
+
+        private fun resetIconState(holder: ViewHolder, isSelected: Boolean) {
+            holder.iconView.animate().cancel()
+            holder.checkBadge.animate().cancel()
+
+            holder.iconView.rotationY = 0f
+            holder.checkBadge.rotationY = 0f
+
+            if (isSelected) {
+                holder.iconView.visibility = View.INVISIBLE
+                holder.checkBadge.visibility = View.VISIBLE
+            } else {
+                holder.iconView.visibility = View.VISIBLE
+                holder.checkBadge.visibility = View.GONE
+            }
+        }
+
+        private fun animateIconFlip(holder: ViewHolder, isSelected: Boolean) {
+            holder.iconView.animate().cancel()
+            holder.checkBadge.animate().cancel()
+
+            val density = holder.itemView.resources.displayMetrics.density
+            val distance = 8000f * density
+            holder.iconView.cameraDistance = distance
+            holder.checkBadge.cameraDistance = distance
+
+            if (isSelected) {
+                holder.iconView.visibility = View.VISIBLE
+                holder.checkBadge.visibility = View.GONE
+                holder.iconView.rotationY = 0f
+
+                holder.iconView.animate()
+                    .rotationY(90f)
+                    .setDuration(120)
+                    .setInterpolator(AccelerateInterpolator())
+                    .withEndAction {
+                        holder.iconView.visibility = View.INVISIBLE
+                        holder.checkBadge.visibility = View.VISIBLE
+                        holder.checkBadge.rotationY = -90f
+                        holder.checkBadge.animate()
+                            .rotationY(0f)
+                            .setDuration(120)
+                            .setInterpolator(DecelerateInterpolator())
+                            .start()
+                    }
+                    .start()
+            } else {
+                holder.checkBadge.visibility = View.VISIBLE
+                holder.iconView.visibility = View.INVISIBLE
+                holder.checkBadge.rotationY = 0f
+
+                holder.checkBadge.animate()
+                    .rotationY(90f)
+                    .setDuration(120)
+                    .setInterpolator(AccelerateInterpolator())
+                    .withEndAction {
+                        holder.checkBadge.visibility = View.GONE
+                        holder.iconView.visibility = View.VISIBLE
+                        holder.iconView.rotationY = -90f
+                        holder.iconView.animate()
+                            .rotationY(0f)
+                            .setDuration(120)
+                            .setInterpolator(DecelerateInterpolator())
+                            .start()
+                    }
+                    .start()
             }
         }
     }
