@@ -33,6 +33,7 @@ class ActivityInspectorActivity : AppCompatActivity() {
         const val EXTRA_APK_PATH = "extra_apk_path"
         const val EXTRA_APP_NAME = "extra_app_name"
         const val EXTRA_PACKAGE_NAME = "extra_package_name"
+        private const val SCROLL_TO_TOP_MIN_ITEMS = 100
 
         fun createIntent(context: Context, apkPath: String, appName: String, packageName: String): Intent {
             return Intent(context, ActivityInspectorActivity::class.java).apply {
@@ -178,24 +179,32 @@ class ActivityInspectorActivity : AppCompatActivity() {
         binding.recyclerActivities.isVisible = filtered.isNotEmpty()
         binding.layoutEmptyActivities.isVisible = filtered.isEmpty()
 
-        binding.recyclerActivities.adapter = ActivityAdapter(
-            items = filtered,
-            isInstalled = isAppInstalled,
-            packageName = packageName,
-            onLaunchClick = { item ->
-                launchActivity(item)
-            },
-            onCopyClick = { item ->
-                copyToClipboard("Activity Name", item.name)
-            }
-        )
+        val existing = binding.recyclerActivities.adapter as? ActivityAdapter
+        if (existing != null) {
+            existing.setItems(filtered)
+        } else {
+            binding.recyclerActivities.adapter = ActivityAdapter(
+                items = filtered,
+                isInstalled = isAppInstalled,
+                packageName = packageName,
+                onLaunchClick = { item ->
+                    launchActivity(item)
+                },
+                onCopyClick = { item ->
+                    copyToClipboard("Activity Name", item.name)
+                }
+            )
+        }
         binding.recyclerActivities.post {
             updateScrollToTopButton(binding.recyclerActivities)
         }
     }
 
     private fun updateScrollToTopButton(recyclerView: RecyclerView) {
-        val shouldShow = recyclerView.isVisible && recyclerView.canScrollVertically(-1)
+        val shouldShow = recyclerView.isVisible &&
+            recyclerView.adapter != null &&
+            recyclerView.adapter!!.itemCount >= SCROLL_TO_TOP_MIN_ITEMS &&
+            recyclerView.canScrollVertically(-1)
         val button = binding.btnScrollToTop
         if (shouldShow) {
             if (isScrollToTopButtonShown) return
@@ -281,14 +290,54 @@ class ActivityInspectorActivity : AppCompatActivity() {
     }
 
     private class ActivityAdapter(
-        private val items: List<ActivityComponentItem>,
+        items: List<ActivityComponentItem>,
         private val isInstalled: Boolean,
         private val packageName: String,
         private val onLaunchClick: (ActivityComponentItem) -> Unit,
         private val onCopyClick: (ActivityComponentItem) -> Unit
     ) : RecyclerView.Adapter<ActivityAdapter.ViewHolder>() {
 
+        private var items: List<ActivityComponentItem> = items
+
+        /**
+         * Replaces the list in place. The adapter used to be rebuilt from scratch
+         * on every keystroke and every chip change, which threw away the whole
+         * RecyclerView pool for what can be a list of several hundred activities.
+         */
+        fun setItems(newItems: List<ActivityComponentItem>) {
+            if (newItems === items) return
+            val old = items
+            val diff = object : androidx.recyclerview.widget.DiffUtil.Callback() {
+                override fun getOldListSize(): Int = old.size
+                override fun getNewListSize(): Int = newItems.size
+                override fun areItemsTheSame(oldPos: Int, newPos: Int): Boolean =
+                    old[oldPos].name == newItems[newPos].name
+
+                override fun areContentsTheSame(oldPos: Int, newPos: Int): Boolean =
+                    old[oldPos] == newItems[newPos]
+            }
+            items = newItems
+            androidx.recyclerview.widget.DiffUtil.calculateDiff(diff).dispatchUpdatesTo(this)
+        }
+
         private var lastAnimatedPosition = -1
+        private var reducedMotion: Boolean? = null
+        private val actionsTextCache = HashMap<String, String>()
+
+        private fun isReducedMotion(context: android.content.Context): Boolean {
+            reducedMotion?.let { return it }
+            val value = try {
+                Settings.Global.getFloat(
+                    context.contentResolver,
+                    Settings.Global.ANIMATOR_DURATION_SCALE,
+                    1f
+                ) == 0f
+            } catch (e: Exception) {
+                false
+            }
+            reducedMotion = value
+            return value
+        }
 
         class ViewHolder(val binding: ItemActivityComponentBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -340,7 +389,10 @@ class ActivityInspectorActivity : AppCompatActivity() {
 
             if (item.actions.isNotEmpty()) {
                 b.layoutIntentFilters.isVisible = true
-                val actionsText = item.actions.joinToString("\n") { "• $it" }
+                // Memoised: this joined the whole action list on every bind.
+                val actionsText = actionsTextCache.getOrPut(item.name) {
+                    item.actions.joinToString("\n") { "• $it" }
+                }
                 b.textIntentActions.text = actionsText
             } else {
                 b.layoutIntentFilters.isVisible = false
@@ -366,14 +418,10 @@ class ActivityInspectorActivity : AppCompatActivity() {
             val pos = holder.bindingAdapterPosition
             if (pos > lastAnimatedPosition) {
                 lastAnimatedPosition = pos
-                val context = holder.itemView.context
-                val isReducedMotion = try {
-                    Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
-                } catch (e: Exception) {
-                    false
-                }
-
-                if (!isReducedMotion) {
+                // The animator scale is read once for the whole list. It used to be
+                // a ContentResolver query to the settings database for every row as
+                // it scrolled into view.
+                if (!isReducedMotion(holder.itemView.context)) {
                     val v = holder.itemView
                     v.alpha = 0f
                     v.scaleX = 0.94f

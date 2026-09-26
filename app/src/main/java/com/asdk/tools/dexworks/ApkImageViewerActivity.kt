@@ -54,6 +54,13 @@ class ApkImageViewerActivity : AppCompatActivity() {
     private var imagePaths: List<String> = emptyList()
     private var maxDimension: Int = MAX_DIMENSION_FALLBACK
 
+    private val bitmapCache: android.util.LruCache<String, Bitmap> = run {
+        val limit = (Runtime.getRuntime().maxMemory() / 8).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        object : android.util.LruCache<String, Bitmap>(limit) {
+            override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -248,6 +255,7 @@ class ApkImageViewerActivity : AppCompatActivity() {
     }
 
     private fun decodeEntry(path: String): Bitmap {
+        bitmapCache.get(path)?.let { return it }
         val bytes = ZipFile(File(apkPath)).use { zip ->
             val entry = zip.getEntry(path)
                 ?: throw IllegalStateException("Entry not found: $path")
@@ -268,8 +276,12 @@ class ApkImageViewerActivity : AppCompatActivity() {
         }
 
         val options = BitmapFactory.Options().apply { inSampleSize = sample }
-        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+        val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
             ?: throw IllegalStateException("Could not decode image")
+        // Swiping back to a page used to re-open the APK and re-decode the image
+        // every time; the cache makes a revisited page instant.
+        bitmapCache.put(path, decoded)
+        return decoded
     }
 
     private fun showError(message: String) {

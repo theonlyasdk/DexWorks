@@ -41,14 +41,9 @@ class ApkXmlViewerActivity : AppCompatActivity() {
             R.id.action_share,
             R.id.action_save_to,
             R.id.action_unobfuscate,
+            R.id.action_format_json,
             R.id.action_prettify,
             R.id.action_copy
-        )
-        private val DIVIDER_IDS = listOf(
-            R.id.divider_share_save,
-            R.id.divider_save_unobfuscate,
-            R.id.divider_unobfuscate_prettify,
-            R.id.divider_prettify_copy
         )
 
         fun createIntent(context: Context, apkPath: String, entryPath: String): Intent {
@@ -91,12 +86,26 @@ class ApkXmlViewerActivity : AppCompatActivity() {
         binding.toolbar.subtitle = entryPath
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.toolbar.inflateMenu(R.menu.menu_viewer_actions)
+        binding.toolbar.menu.findItem(R.id.action_word_wrap)?.isChecked =
+            AppPrefs.codeWordWrap(this)
         binding.toolbar.setOnMenuItemClickListener { item ->
-            if (item.itemId == R.id.action_viewer_more) {
-                showActionsSheet()
-                true
-            } else {
-                false
+            when (item.itemId) {
+                R.id.action_viewer_more -> {
+                    showActionsSheet()
+                    true
+                }
+                R.id.action_word_wrap -> {
+                    val enabled = !item.isChecked
+                    item.isChecked = enabled
+                    // Persisted so it is retained across sessions and shared with
+                    // the manifest inspector.
+                    AppPrefs.get(this).edit()
+                        .putBoolean(AppPrefs.KEY_CODE_WORD_WRAP, enabled)
+                        .apply()
+                    binding.codeEditor.setWordwrap(enabled)
+                    true
+                }
+                else -> false
             }
         }
 
@@ -108,13 +117,15 @@ class ApkXmlViewerActivity : AppCompatActivity() {
         val dialog = BottomSheetDialog(this)
         val content = layoutInflater.inflate(R.layout.sheet_viewer_actions, null)
         val isJavaScript = viewerLanguage() == EntryLanguage.JAVASCRIPT
+        val isJson = isJsonEntry()
         content.findViewById<TextView>(R.id.text_copy_label).setText(R.string.viewer_copy_text)
         content.findViewById<View>(R.id.action_unobfuscate).isVisible = isJavaScript
+        // JSON offers formatting instead of deobfuscation, which does not apply.
+        content.findViewById<View>(R.id.action_format_json).isVisible = isJson
         content.findViewById<View>(R.id.action_prettify).isVisible = isJavaScript
         applySegmentCorners(
             content,
-            ROW_IDS,
-            DIVIDER_IDS
+            ROW_IDS
         )
         content.findViewById<View>(R.id.action_share).setOnClickListener {
             dialog.dismiss()
@@ -127,6 +138,10 @@ class ApkXmlViewerActivity : AppCompatActivity() {
         content.findViewById<View>(R.id.action_unobfuscate).setOnClickListener {
             dialog.dismiss()
             unobfuscateEntry()
+        }
+        content.findViewById<View>(R.id.action_format_json).setOnClickListener {
+            dialog.dismiss()
+            formatJsonEntry()
         }
         content.findViewById<View>(R.id.action_prettify).setOnClickListener {
             dialog.dismiss()
@@ -152,6 +167,36 @@ class ApkXmlViewerActivity : AppCompatActivity() {
         }
         dialog.show()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    }
+
+    private fun isJsonEntry(): Boolean {
+        val path = entryPath.lowercase()
+        return path.endsWith(".json") || path.endsWith(".json5")
+    }
+
+    private fun formatJsonEntry() {
+        val source = currentText
+        if (source.isBlank()) {
+            Snackbar.make(binding.root, R.string.error_loading_xml, Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        val formatted = try {
+            JsonFormatter.prettify(source)
+        } catch (e: Exception) {
+            Snackbar.make(binding.root, R.string.error_loading_xml, Snackbar.LENGTH_LONG).show()
+            return
+        }
+        if (formatted == source) {
+            Snackbar.make(binding.root, R.string.viewer_no_changes, Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        currentText = formatted
+        binding.codeEditor.setText(formatted)
+        Snackbar.make(
+            binding.root,
+            getString(R.string.viewer_transform_applied, getString(R.string.viewer_format_json)),
+            Snackbar.LENGTH_SHORT
+        ).show()
     }
 
     private fun unobfuscateEntry() {

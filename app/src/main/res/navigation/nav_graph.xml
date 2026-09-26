@@ -17,10 +17,4 @@
         android:label="@string/title_projects"
         tools:layout="@layout/fragment_projects" />
 
-    <fragment
-        android:id="@+id/navigation_tools"
-        android:name="com.asdk.tools.dexworks.ToolsFragment"
-        android:label="@string/title_tools"
-        tools:layout="@layout/fragment_tools" />
-
 </navigation>

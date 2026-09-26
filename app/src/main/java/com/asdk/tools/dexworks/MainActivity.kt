@@ -29,6 +29,14 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private var allInstalledApps: List<AppItem> = emptyList()
+    private var searchNameKeys: List<String> = emptyList()
+    private var searchPackageKeys: List<String> = emptyList()
+    private var searchRunnable: Runnable? = null
+    private val searchIconLoader = AppIconLoader()
+
+    private companion object {
+        const val SEARCH_DEBOUNCE_MS = 180L
+    }
 
     private lateinit var notificationPermissionLauncher: androidx.activity.result.ActivityResultLauncher<String>
 
@@ -111,12 +119,22 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.searchView.editText.addTextChangedListener { text ->
-            filterSearchResults(text?.toString()?.trim() ?: "")
+            val query = text?.toString()?.trim() ?: ""
+            // Debounced: without this every keystroke re-filtered all installed
+            // apps and rebound the result list.
+            searchRunnable?.let { binding.searchView.removeCallbacks(it) }
+            val runnable = Runnable { filterSearchResults(query) }
+            searchRunnable = runnable
+            binding.searchView.postDelayed(runnable, SEARCH_DEBOUNCE_MS)
         }
     }
 
     fun updateInstalledApps(apps: List<AppItem>) {
         allInstalledApps = apps
+        // Pre-lowercase once so filtering does not allocate two lowercase strings
+        // per app on every keystroke.
+        searchNameKeys = apps.map { it.name.lowercase() }
+        searchPackageKeys = apps.map { it.packageName.lowercase() }
         if (binding.searchView.isShowing) {
             filterSearchResults(binding.searchView.editText.text?.toString()?.trim() ?: "")
         }
@@ -126,33 +144,41 @@ class MainActivity : AppCompatActivity() {
         val filtered = if (query.isBlank()) {
             allInstalledApps
         } else {
-            allInstalledApps.filter { app ->
-                app.name.contains(query, ignoreCase = true) ||
-                        app.packageName.contains(query, ignoreCase = true)
-            }
+            val needle = query.lowercase()
+            allInstalledApps.indices.filter { index ->
+                searchNameKeys.getOrNull(index)?.contains(needle) == true ||
+                    searchPackageKeys.getOrNull(index)?.contains(needle) == true
+            }.map { allInstalledApps[it] }
         }
 
         binding.recyclerSearchResults.isVisible = filtered.isNotEmpty()
         binding.layoutSearchEmpty.isVisible = filtered.isEmpty()
 
-        binding.recyclerSearchResults.adapter = BrowseFragment.AppAdapter(
-            filtered,
-            onItemClick = { selectedApp ->
-                binding.searchView.hide()
-                AppDetailActivity.start(this, packageName = selectedApp.packageName)
-            },
-            onSaveApkToClick = { app ->
-                val browseFragment = supportFragmentManager.fragments.firstOrNull { it is BrowseFragment } as? BrowseFragment
-                browseFragment?.saveApk(app)
-            }
-        )
+        // One adapter for the life of the activity, so the icon cache survives
+        // typing instead of being rebuilt empty on every character.
+        val adapter = binding.recyclerSearchResults.adapter as? BrowseFragment.AppAdapter
+        if (adapter != null) {
+            adapter.submit(filtered)
+        } else {
+            binding.recyclerSearchResults.adapter = BrowseFragment.AppAdapter(
+                filtered,
+                onItemClick = { selectedApp ->
+                    binding.searchView.hide()
+                    AppDetailActivity.start(this, packageName = selectedApp.packageName)
+                },
+                onSaveApkToClick = { app ->
+                    val browseFragment = supportFragmentManager.fragments.firstOrNull { it is BrowseFragment } as? BrowseFragment
+                    browseFragment?.saveApk(app)
+                },
+                iconLoader = searchIconLoader
+            )
+        }
     }
 
     private fun setupSwipeNavigation() {
         val fragments: List<() -> androidx.fragment.app.Fragment> = listOf(
             { BrowseFragment() },
-            { ProjectsFragment() },
-            { ToolsFragment() }
+            { ProjectsFragment() }
         )
 
         binding.viewPager.adapter = object : androidx.viewpager2.adapter.FragmentStateAdapter(this) {
@@ -162,13 +188,11 @@ class MainActivity : AppCompatActivity() {
 
         val titles = listOf(
             R.string.title_browse,
-            R.string.title_projects,
-            R.string.title_tools
+            R.string.title_projects
         )
         val menuIds = listOf(
             R.id.navigation_browse,
-            R.id.navigation_projects,
-            R.id.navigation_tools
+            R.id.navigation_projects
         )
 
         val updateTabVisibility = { position: Int ->

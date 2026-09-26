@@ -15,6 +15,10 @@ fragment = "1.9.0"
 swiperefreshlayout = "1.1.0"
 viewpager2 = "1.1.0"
 sora-editor = "0.23.4"
+baksmali = "2.5.2"
+cfr = "0.152"
+dex2jar = "2.4.36"
+desugarNio = "2.1.5"
 
 [libraries]
 androidx-viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", version.ref = "viewpager2" }
@@ -32,7 +36,10 @@ androidx-navigation-fragment-ktx = { group = "androidx.navigation", name = "navi
 androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation-ui-ktx", version.ref = "navigationUiKtx" }
 androidx-fragment = { group = "androidx.fragment", name = "fragment", version.ref = "fragment" }
 sora-editor = { module = "io.github.Rosemoe.sora-editor:editor", version.ref = "sora-editor" }
+baksmali = { module = "org.smali:baksmali", version.ref = "baksmali" }
+cfr = { module = "org.benf:cfr", version.ref = "cfr" }
+dex2jar-translator = { module = "de.femtopedia.dex2jar:dex-translator", version.ref = "dex2jar" }
+desugar-nio = { module = "com.android.tools:desugar_jdk_libs_nio", version.ref = "desugarNio" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-

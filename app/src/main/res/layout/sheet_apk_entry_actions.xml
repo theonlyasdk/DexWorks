@@ -95,10 +95,6 @@
                 android:textColor="?attr/colorOnSurface" />
         </LinearLayout>
 
-        <com.google.android.material.divider.MaterialDivider
-            android:id="@+id/divider_preview_save"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
 
         <LinearLayout
             android:id="@+id/action_save_to"
@@ -129,10 +125,6 @@
                 android:textColor="?attr/colorOnSurface" />
         </LinearLayout>
 
-        <com.google.android.material.divider.MaterialDivider
-            android:id="@+id/divider_save_share"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
 
         <LinearLayout
             android:id="@+id/action_share"
@@ -163,10 +155,6 @@
                 android:textColor="?attr/colorOnSurface" />
         </LinearLayout>
 
-        <com.google.android.material.divider.MaterialDivider
-            android:id="@+id/divider_share_info"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
 
         <LinearLayout
             android:id="@+id/action_info"

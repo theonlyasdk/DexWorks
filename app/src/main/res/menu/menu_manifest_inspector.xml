@@ -12,6 +12,11 @@
         android:icon="@android:drawable/ic_menu_share"
         app:showAsAction="ifRoom" />
     <item
+        android:id="@+id/action_word_wrap"
+        android:checkable="true"
+        android:title="@string/settings_word_wrap"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_select_all_manifest"
         android:title="@string/action_select_all"
         app:showAsAction="never" />

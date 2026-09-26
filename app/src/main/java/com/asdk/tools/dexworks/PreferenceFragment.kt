@@ -3,11 +3,15 @@ package com.asdk.tools.dexworks
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import androidx.lifecycle.lifecycleScope
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class PreferenceFragment : PreferenceFragmentCompat() {
 
@@ -138,26 +142,36 @@ class PreferenceFragment : PreferenceFragmentCompat() {
     }
 
     private fun clearCache() {
-        val deleted = try {
-            val dir = requireContext().cacheDir
-            var count = 0
-            dir.listFiles()?.forEach { child ->
-                if (child.isDirectory) count += child.listFiles()?.size ?: 0 else count++
-                @Suppress("ResultOfMethodCallIgnored")
-                child.deleteRecursively()
+        val context = requireContext().applicationContext
+        // Recursive deletes and listFiles walked the whole cache tree; doing that
+        // on the main thread risked an ANR on a large cache.
+        viewLifecycleOwner.lifecycleScope.launch {
+            val deleted = withContext(Dispatchers.IO) {
+                try {
+                    var count = 0
+                    context.cacheDir.listFiles()?.forEach { child ->
+                        if (child.isDirectory) {
+                            count += child.listFiles()?.size ?: 0
+                        } else {
+                            count++
+                        }
+                        @Suppress("ResultOfMethodCallIgnored")
+                        child.deleteRecursively()
+                    }
+                    count
+                } catch (e: Exception) {
+                    -1
+                }
             }
-            count
-        } catch (e: Exception) {
-            -1
-        }
 
-        val message = if (deleted < 0) {
-            getString(R.string.settings_cache_failed)
-        } else {
-            getString(R.string.settings_cache_cleared)
+            val message = if (deleted < 0) {
+                getString(R.string.settings_cache_failed)
+            } else {
+                getString(R.string.settings_cache_cleared)
+            }
+            val view = view ?: return@launch
+            Snackbar.make(view, message, Snackbar.LENGTH_SHORT).show()
         }
-        val view = view ?: return
-        Snackbar.make(view, message, Snackbar.LENGTH_SHORT).show()
     }
 
     private companion object {

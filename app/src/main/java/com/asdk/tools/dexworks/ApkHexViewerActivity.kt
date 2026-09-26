@@ -43,6 +43,7 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
     private var pageCount: Int = 1
     private var pageStart: Long = 0L
     private var pageSize: Long = FULL_LOAD_MAX_FALLBACK
+    private var openZipRef: ZipFile? = null
 
     private lateinit var sheetBehavior: BottomSheetBehavior<android.view.View>
     private var sheetVisible: Boolean = false
@@ -79,6 +80,20 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
                 else -> BottomSheetBehavior.STATE_HALF_EXPANDED
             }
         }
+        // The sheet covers a different amount of the hex view depending on whether
+        // it is collapsed, half or fully expanded, so the usable height has to be
+        // tracked live for centring to land in the right place.
+        sheetBehavior.addBottomSheetCallback(
+            object : BottomSheetBehavior.BottomSheetCallback() {
+                override fun onStateChanged(bottomSheet: android.view.View, newState: Int) {
+                    updateHexBottomInset()
+                }
+
+                override fun onSlide(bottomSheet: android.view.View, slideOffset: Float) {
+                    updateHexBottomInset()
+                }
+            }
+        )
 
         binding.hexView.listener = this
         binding.btnPrevPage.setOnClickListener { if (pageIndex > 0) loadPage(pageIndex - 1) }
@@ -91,6 +106,7 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
                     loadPage(pageIndex - 1, selectOffsetAfterLoad = prev)
                 } else {
                     binding.hexView.selectOffset(prev)
+                binding.hexView.centerOffsetInView(prev)
                 }
             }
         }
@@ -102,6 +118,7 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
                     loadPage(pageIndex + 1, selectOffsetAfterLoad = next)
                 } else {
                     binding.hexView.selectOffset(next)
+                binding.hexView.centerOffsetInView(next)
                 }
             }
         }
@@ -132,15 +149,15 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    ZipFile(File(apkPath)).use { zip ->
-                        val entry = zip.getEntry(entryPath)
-                            ?: throw IllegalStateException("Entry not found: $entryPath")
-                        val size = entry.size
-                        size to entry
-                    }
+                    // Held open for the whole session. Re-opening per page meant
+                    // re-parsing the APK central directory on every page change.
+                    val zip = openZip()
+                    val entry = zip.getEntry(entryPath)
+                        ?: throw IllegalStateException("Entry not found: $entryPath")
+                    entry.size
                 }
             }
-            result.onSuccess { (size, entry) ->
+            result.onSuccess { size ->
                 totalSize = size
                 isPaged = size > pageSize
                 pageCount = if (isPaged) ((size + pageSize - 1) / pageSize).toInt() else 1
@@ -150,6 +167,8 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
             }
         }
     }
+
+    private fun openZip(): ZipFile = openZipRef ?: ZipFile(File(apkPath)).also { openZipRef = it }
 
     private fun loadPage(index: Int, selectOffsetAfterLoad: Long? = null) {
         pageIndex = index
@@ -164,27 +183,26 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    ZipFile(File(apkPath)).use { zip ->
-                        val entry = zip.getEntry(entryPath)
-                            ?: throw IllegalStateException("Entry not found: $entryPath")
-                        val remaining = (totalSize - pageStart).coerceAtLeast(0)
-                        val length = minOf(remaining, pageSize).toInt()
-                        val buffer = ByteArray(length)
-                        zip.getInputStream(entry).use { input ->
-                            var skipped = 0L
-                            while (skipped < pageStart) {
-                                val s = input.skip(pageStart - skipped)
-                                if (s <= 0) break
-                                skipped += s
-                            }
-                            var read = 0
-                            while (read < length) {
-                                val count = input.read(buffer, read, length - read)
-                                if (count < 0) break
-                                read += count
-                            }
-                            buffer
+                    val zip = openZip()
+                    val entry = zip.getEntry(entryPath)
+                        ?: throw IllegalStateException("Entry not found: $entryPath")
+                    val remaining = (totalSize - pageStart).coerceAtLeast(0)
+                    val length = minOf(remaining, pageSize).toInt()
+                    val buffer = ByteArray(length)
+                    zip.getInputStream(entry).use { input ->
+                        var skipped = 0L
+                        while (skipped < pageStart) {
+                            val s = input.skip(pageStart - skipped)
+                            if (s <= 0) break
+                            skipped += s
                         }
+                        var read = 0
+                        while (read < length) {
+                            val count = input.read(buffer, read, length - read)
+                            if (count < 0) break
+                            read += count
+                        }
+                        buffer
                     }
                 }
             }
@@ -200,6 +218,9 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
                 )
                 if (selectOffsetAfterLoad != null) {
                     binding.hexView.selectOffset(selectOffsetAfterLoad)
+                    // Centring has to wait for the new data, otherwise it would
+                    // scroll using the previous page geometry.
+                    binding.hexView.centerOffsetInView(selectOffsetAfterLoad)
                 }
             }.onFailure { error ->
                 showError(error.localizedMessage ?: getString(R.string.error_loading_hex))
@@ -253,7 +274,7 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
         if (!sheetVisible) {
             sheetVisible = true
             binding.byteSheet.root.isVisible = true
-            binding.hexView.setBottomInset(peekHeightPx)
+            updateHexBottomInset()
             binding.byteSheet.root.post {
                 sheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
             }
@@ -262,9 +283,39 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
         }
     }
 
+    /** Amount of the hex view currently covered by the sheet, in pixels. */
+    private fun updateHexBottomInset() {
+        val sheet = binding.byteSheet.root
+        if (!sheet.isVisible) {
+            binding.hexView.setBottomInset(0)
+            return
+        }
+        val hexLocation = IntArray(2)
+        val sheetLocation = IntArray(2)
+        binding.hexView.getLocationInWindow(hexLocation)
+        sheet.getLocationInWindow(sheetLocation)
+        val occluded = (hexLocation[1] + binding.hexView.height) - sheetLocation[1]
+        binding.hexView.setBottomInset(occluded.coerceAtLeast(0))
+    }
+
     private fun showError(message: String) {
+        closeZip()
         binding.layoutError.isVisible = true
         binding.textErrorMessage.text = message
         binding.hexView.isVisible = false
+    }
+
+    private fun closeZip() {
+        try {
+            openZipRef?.close()
+        } catch (e: Exception) {
+            // ignore
+        }
+        openZipRef = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        closeZip()
     }
 }

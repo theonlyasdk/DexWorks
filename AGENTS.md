@@ -2,7 +2,7 @@ DexWorks is an on-device Android package analysis and reverse-engineering workbe
 
 Stack: Kotlin, Views with XML and ViewBinding, no Compose. Navigation Component. Material 3 base theme Theme.Material3.DayNight.NoActionBar, keep it. Material library 1.14.0. minSdk 23, targetSdk 37.
 
-Key files: MainActivity.kt holds the bottom navigation with Browse, Projects, Tools. BrowseFragment.kt holds the SearchBar and SearchView. AppDetailActivity and AppDetailFragment.kt show app details. PreferenceActivity and PreferenceFragment.kt with res xml preferences.xml hold settings. The Gradle version catalog is in gradle libs.versions.toml.
+Key files: MainActivity.kt holds the bottom navigation with Browse and Projects. BrowseFragment.kt holds the SearchBar and SearchView. AppDetailActivity and AppDetailFragment.kt show app details. PreferenceActivity and PreferenceFragment.kt with res xml preferences.xml hold settings. The Gradle version catalog is in gradle libs.versions.toml.
 
 Skills: agent skills live in the .agents skills folder, one folder per skill, 23 in total including android-dev, compose, kotlin-docs, material-uiux, kotlin-coroutines, kotlin-flows, android-testing, android-debugging. Load only the single skill matching the task, never several at once.
 

@@ -92,6 +92,30 @@ object ProjectStore {
 
     fun getCachedProjects(): List<ProjectItem>? = cachedProjects
 
+    /**
+     * Finds an existing project that already points at the same APK, so an import
+     * can offer to open it instead of silently creating a duplicate.
+     */
+    fun findByApkPath(context: Context, apkPath: String): ProjectItem? {
+        if (apkPath.isBlank()) return null
+        val target = try {
+            File(apkPath).canonicalPath
+        } catch (e: Exception) {
+            apkPath
+        }
+        val projects = loadProjects(context)
+        return projects.firstOrNull { project ->
+            val candidate = project.apkPath
+                ?: File(project.path, APK_FILE_NAME).takeIf { it.isFile }?.absolutePath
+            candidate != null && runCatching { File(candidate).canonicalPath }.getOrNull() == target
+        }
+    }
+
+    fun findByName(context: Context, name: String): ProjectItem? {
+        if (name.isBlank()) return null
+        return loadProjects(context).firstOrNull { it.name.equals(name, ignoreCase = true) }
+    }
+
     fun loadProjects(context: Context, forceReload: Boolean = false): List<ProjectItem> {
         if (!forceReload && cachedProjects != null) {
             return cachedProjects!!
@@ -111,13 +135,18 @@ object ProjectStore {
                 val name = item.optString("name").trim()
                 val path = item.optString("path").trim()
                 if (name.isBlank() || path.isBlank()) continue
+                val apkPath = item.optString("apkPath").takeIf { it.isNotBlank() }
+                val resolvedApkPath = apkPath
+                    ?: File(path, APK_FILE_NAME).takeIf { it.isFile }?.absolutePath
+                    ?: path.takeIf { File(it).isFile && it.endsWith(".apk", ignoreCase = true) }
+
                 projects += ProjectItem(
                     name = name,
                     path = path,
                     lastModified = item.optLong("lastModified", 0L),
-                    apkPath = item.optString("apkPath").takeIf { it.isNotBlank() },
+                    apkPath = resolvedApkPath,
                     iconKey = item.optString("iconKey", ProjectIconCatalog.DEFAULT_KEY),
-                    useApkIcon = item.optBoolean("useApkIcon", false)
+                    useApkIcon = item.optBoolean("useApkIcon", resolvedApkPath != null)
                 )
             }
             cachedProjects = projects
@@ -139,7 +168,7 @@ object ProjectStore {
         if (!projectsRoot.exists() && !projectsRoot.mkdirs()) return null
 
         val safeName = name.trim()
-            .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+            .replace(SanitizedNames.UNSAFE_CHARS, "_")
             .ifBlank { "Project" }
         var projectDirectory = File(projectsRoot, safeName)
         var suffix = 2
@@ -185,6 +214,33 @@ object ProjectStore {
         } catch (e: Exception) {
             projectDirectory.deleteRecursively()
             null
+        }
+    }
+
+    /**
+     * Deletes a project: removes its directory if it lives inside the projects
+     * folder, then drops its entry. A legacy path pointing at an APK outside the
+     * projects folder only loses its entry, never the file itself.
+     * Callers must invoke this off the main thread.
+     */
+    fun deleteProject(context: Context, path: String): Boolean {
+        if (path.isBlank()) return false
+        return try {
+            val target = File(path)
+            val root = File(context.filesDir, PROJECTS_DIRECTORY)
+            val inside = try {
+                target.canonicalPath == root.canonicalPath ||
+                    target.canonicalPath.startsWith(root.canonicalPath + File.separator)
+            } catch (e: Exception) {
+                false
+            }
+            if (inside) {
+                target.deleteRecursively()
+            }
+            val remaining = loadProjects(context).filterNot { it.path == path }
+            saveProjects(context, remaining)
+        } catch (e: Exception) {
+            false
         }
     }
 

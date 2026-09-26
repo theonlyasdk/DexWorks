@@ -9,6 +9,17 @@ object JsSourceTools {
         "case", "do", "else", "yield", "await"
     )
 
+    // Compiled once: unobfuscateOnce runs up to four times over the whole file,
+    // and these were previously rebuilt on every pass.
+    private val FROM_CHAR_CODE = Regex("String\\s*\\.\\s*fromCharCode\\s*\\(([^()]*)\\)")
+    private val ATOB_CALL = Regex("atob\\s*\\(\\s*[\"']([A-Za-z0-9+/=]*)[\"']\\s*\\)")
+    private val STRING_CONCAT = Regex(
+        "\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\"\\s*(?:\\+\\s*\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\")+"
+    )
+    private val BANG_ZERO = Regex("(?<![\\w$.])!0(?![\\w$])")
+    private val BANG_ONE = Regex("(?<![\\w$.])!1(?![\\w$])")
+    private val VOID_ZERO = Regex("(?<![\\w$.])void\\s+0(?![\\w$])")
+
     fun prettify(source: String): String {
         return try {
             prettifyInternal(source)
@@ -193,10 +204,7 @@ object JsSourceTools {
 
     // Replaces String.fromCharCode(72, 101) with "He" when every argument is a literal number.
     private fun foldFromCharCode(source: String): String {
-        val pattern = Regex(
-            "String\\s*\\.\\s*fromCharCode\\s*\\(([^()]*)\\)"
-        )
-        return pattern.replace(source) { match ->
+        return FROM_CHAR_CODE.replace(source) { match ->
             val args = match.groupValues[1]
                 .split(',')
                 .map { it.trim() }
@@ -212,10 +220,10 @@ object JsSourceTools {
 
     // Replaces atob("...") with the decoded text when the argument is a plain literal.
     private fun foldAtob(source: String): String {
-        val pattern = Regex("atob\\s*\\(\\s*[\"']([A-Za-z0-9+/=]*)[\"']\\s*\\)")
+        val pattern = ATOB_CALL
         return pattern.replace(source) { match ->
             val decoded = runCatching { String(decodeBase64(match.groupValues[1])) }.getOrNull()
-            if (decoded == null || decoded.any { it.toInt() < 9 || it.toInt() > 126 }) {
+            if (decoded == null || decoded.any { it.code < 9 || it.code > 126 }) {
                 match.value
             } else {
                 quoteForSource(decoded)
@@ -225,8 +233,7 @@ object JsSourceTools {
 
     // Merges runs of literals joined by +, e.g. "a" + "b" + "c" becomes "abc".
     private fun foldConcatenation(source: String): String {
-        val pattern = Regex("\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\"\\s*(?:\\+\\s*\"[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*\")+")
-        return pattern.replace(source) { match ->
+        return STRING_CONCAT.replace(source) { match ->
             val raw = match.value
             if (raw.contains("//") || raw.contains("/*")) return@replace raw
             val builder = StringBuilder()
@@ -255,9 +262,9 @@ object JsSourceTools {
     // !0 -> true, !1 -> false, void 0 -> undefined
     private fun foldTernaryConstants(source: String): String {
         var text = source
-        text = Regex("(?<![\\w$.])!0(?![\\w$])").replace(text, "true")
-        text = Regex("(?<![\\w$.])!1(?![\\w$])").replace(text, "false")
-        text = Regex("(?<![\\w$.])void\\s+0(?![\\w$])").replace(text, "undefined")
+        text = BANG_ZERO.replace(text, "true")
+        text = BANG_ONE.replace(text, "false")
+        text = VOID_ZERO.replace(text, "undefined")
         return text
     }
 
@@ -377,8 +384,8 @@ object JsSourceTools {
                 '\n' -> out.append("\\n")
                 '\r' -> out.append("\\r")
                 '\t' -> out.append("\\t")
-                else -> if (c.toInt() < 32) {
-                    out.append(String.format("\\u%04x", c.toInt()))
+                else -> if (c.code < 32) {
+                    out.append(String.format("\\u%04x", c.code))
                 } else {
                     out.append(c)
                 }

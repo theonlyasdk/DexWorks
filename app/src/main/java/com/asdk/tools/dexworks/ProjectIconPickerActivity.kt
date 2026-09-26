@@ -26,6 +26,7 @@ class ProjectIconPickerActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityProjectIconPickerBinding
     private var selectedIconKey: String = ProjectIconCatalog.DEFAULT_KEY
+    private val allIconOptions: List<ProjectIconOption> = ProjectIconCatalog.all()
     private val iconAdapter = IconAdapter(
         onIconSelected = { option ->
             selectedIconKey = option.key
@@ -71,8 +72,14 @@ class ProjectIconPickerActivity : AppCompatActivity() {
     }
 
     private fun filterIcons(query: String) {
-        val filtered = ProjectIconCatalog.all().filter { option ->
-            getString(option.labelRes).contains(query, ignoreCase = true)
+        // Labels are resolved once and reused, instead of a Resources.getString
+        // per catalogue entry on every keystroke.
+        val filtered = if (allIconOptions.isEmpty()) {
+            emptyList()
+        } else {
+            allIconOptions.filter { option ->
+                getString(option.labelRes).contains(query, ignoreCase = true)
+            }
         }
         iconAdapter.setItems(filtered, selectedIconKey)
         binding.textIconSearchEmpty.isVisible = filtered.isEmpty()
@@ -87,9 +94,21 @@ class ProjectIconPickerActivity : AppCompatActivity() {
         private var selectedKey: String = ProjectIconCatalog.DEFAULT_KEY
 
         fun setItems(newItems: List<ProjectIconOption>, newSelectedKey: String) {
+            if (newItems === items && newSelectedKey == selectedKey) return
+            val previousSelected = selectedKey
+            val listChanged = newItems !== items
             items = newItems
             selectedKey = newSelectedKey
-            notifyDataSetChanged()
+            if (listChanged) {
+                notifyDataSetChanged()
+            } else {
+                // Only the selection moved, so rebind the two affected cells
+                // instead of the whole grid.
+                val previousIndex = items.indexOfFirst { it.key == previousSelected }
+                val newIndex = items.indexOfFirst { it.key == newSelectedKey }
+                if (previousIndex >= 0) notifyItemChanged(previousIndex)
+                if (newIndex >= 0 && newIndex != previousIndex) notifyItemChanged(newIndex)
+            }
         }
 
         class ViewHolder(val binding: ItemProjectIconBinding) : RecyclerView.ViewHolder(binding.root) {

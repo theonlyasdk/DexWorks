@@ -27,6 +27,8 @@ class ProjectWizardActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_APK_PATH = "extra_apk_path"
         const val EXTRA_APP_NAME = "extra_app_name"
+        const val EXTRA_PROJECT_PATH = "extra_project_path"
+        const val EXTRA_PROJECT_NAME = "extra_project_name"
 
         fun createIntent(context: Context, apkPath: String? = null, appName: String? = null): Intent {
             return Intent(context, ProjectWizardActivity::class.java).apply {
@@ -70,7 +72,7 @@ class ProjectWizardActivity : AppCompatActivity() {
                 if (previewPath != null) {
                     selectedApkPreviewPath = previewPath
                     val appName = withContext(Dispatchers.IO) {
-                        AppInfoUtils.getPackageArchiveInfo(applicationContext, previewPath)
+                        AppInfoUtils.getPackageArchiveInfo(applicationContext, previewPath, fullComponents = false)
                             ?.applicationInfo
                             ?.loadLabel(packageManager)
                             ?.toString()
@@ -80,7 +82,10 @@ class ProjectWizardActivity : AppCompatActivity() {
                         binding.editProjectName.setText(appName)
                         binding.layoutProjectName.error = null
                     }
-                    if (useApkIcon) updateIconPreview()
+                    useApkIcon = true
+                    binding.checkboxUseApkIcon.isChecked = true
+                    binding.btnChooseIcon.isEnabled = false
+                    updateIconPreview()
                 }
             }
         }
@@ -146,7 +151,7 @@ class ProjectWizardActivity : AppCompatActivity() {
                 selectedApkUri = Uri.fromFile(file)
                 selectedApkPreviewPath = initialApkPath
                 binding.textSelectedApk.text = getString(R.string.wizard_apk_selected, file.name)
-                val resolvedAppName = initialAppName ?: AppInfoUtils.getPackageArchiveInfo(applicationContext, initialApkPath)
+                val resolvedAppName = initialAppName ?: AppInfoUtils.getPackageArchiveInfo(applicationContext, initialApkPath, fullComponents = false)
                     ?.applicationInfo
                     ?.loadLabel(packageManager)
                     ?.toString()
@@ -209,7 +214,7 @@ class ProjectWizardActivity : AppCompatActivity() {
         if (useApkIcon) {
             val previewPath = selectedApkPreviewPath
             val apkIcon = if (previewPath != null) {
-                AppInfoUtils.getPackageArchiveInfo(this, previewPath)
+                AppInfoUtils.getPackageArchiveInfo(this, previewPath, fullComponents = false)
                     ?.applicationInfo
                     ?.loadIcon(packageManager)
             } else {
@@ -271,7 +276,13 @@ class ProjectWizardActivity : AppCompatActivity() {
                     Snackbar.LENGTH_LONG
                 ).show()
             } else {
-                setResult(RESULT_OK)
+                setResult(
+                    RESULT_OK,
+                    Intent().apply {
+                        putExtra(EXTRA_PROJECT_PATH, project.path)
+                        putExtra(EXTRA_PROJECT_NAME, project.name)
+                    }
+                )
                 finish()
             }
         }

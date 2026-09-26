@@ -6,6 +6,8 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.os.Build
+import android.os.SystemClock
+import android.util.Log
 import java.io.File
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
@@ -25,6 +27,8 @@ data class AppItem(
 
 object AppInfoUtils {
 
+    private const val TAG = "AppLoad"
+
     fun formatFileSize(bytes: Long): String {
         if (bytes <= 0) return "0 B"
         val kb = bytes / 1024.0
@@ -40,9 +44,14 @@ object AppInfoUtils {
 
     fun formatDate(timestamp: Long): String {
         if (timestamp <= 0) return "N/A"
-        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        // SimpleDateFormat is not thread safe and is expensive to build, and this
+        // is called from bind paths, so keep one per thread instead of per call.
+        val sdf = dateFormat.get() ?: SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+            .also { dateFormat.set(it) }
         return sdf.format(Date(timestamp))
     }
+
+    private val dateFormat = ThreadLocal<SimpleDateFormat>()
 
     fun getVersionCode(packageInfo: PackageInfo): Long {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -94,53 +103,116 @@ object AppInfoUtils {
 
     fun getInstalledApps(
         context: Context,
+        knownNames: Map<String, String> = emptyMap(),
+        progressStride: Int = 8,
         onProgress: ((loaded: Int, total: Int) -> Unit)? = null
     ): List<AppItem> {
         val pm = context.packageManager
-        val flags = PackageManager.GET_META_DATA
+        val tQueryStart = SystemClock.elapsedRealtime()
+        // GET_META_DATA forces a meta-data Bundle to be parsed for every single
+        // package. Nothing here reads it, so it is pure cost on a device with
+        // hundreds of apps.
+        val flags = 0
         val packages = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             pm.getInstalledPackages(PackageManager.PackageInfoFlags.of(flags.toLong()))
         } else {
             @Suppress("DEPRECATION")
             pm.getInstalledPackages(flags)
         }
+        val tQueryDone = SystemClock.elapsedRealtime()
 
         val total = packages.size
-        val appList = ArrayList<AppItem>(total)
-        var count = 0
+        val slots = arrayOfNulls<AppItem>(total)
+        val labelMs = java.util.concurrent.atomic.AtomicLong(0)
+        val sizeMs = java.util.concurrent.atomic.AtomicLong(0)
+        val done = java.util.concurrent.atomic.AtomicInteger(0)
+        val lastPublished = java.util.concurrent.atomic.AtomicInteger(0)
 
-        for (pkg in packages) {
-            count++
-            val appInfo = pkg.applicationInfo
-            if (appInfo != null) {
-                val name = appInfo.loadLabel(pm).toString().ifBlank { pkg.packageName }
-                val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                val file = File(appInfo.sourceDir)
-                val size = if (file.exists()) file.length() else 0L
-                val icon = try {
-                    appInfo.loadIcon(pm)
-                } catch (e: Exception) {
-                    null
+        // Resolving a label makes the framework load that app's resources, which
+        // measured at 1727ms of a 2116ms load for 481 packages, and it is by far
+        // the dominant cost. Two things fix that: skip it for packages whose name we
+        // already know, and resolve the remainder across several cores.
+        val workers = minOf(4, maxOf(1, Runtime.getRuntime().availableProcessors()))
+        val chunk = maxOf(1, (total + workers - 1) / workers)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(workers)
+        try {
+            var start = 0
+            while (start < total) {
+                val from = start
+                val to = minOf(total, start + chunk)
+                pool.execute {
+                    for (index in from until to) {
+                        val pkg = packages[index]
+                        val appInfo = pkg.applicationInfo
+                        if (appInfo != null) {
+                            val cachedName = knownNames[pkg.packageName]
+                            val name: String
+                            if (cachedName != null) {
+                                name = cachedName
+                            } else {
+                                val labelStart = SystemClock.elapsedRealtime()
+                                name = appInfo.loadLabel(pm).toString().ifBlank { pkg.packageName }
+                                labelMs.addAndGet(SystemClock.elapsedRealtime() - labelStart)
+                            }
+
+                            val sizeStart = SystemClock.elapsedRealtime()
+                            val size = File(appInfo.sourceDir).length()
+                            sizeMs.addAndGet(SystemClock.elapsedRealtime() - sizeStart)
+
+                            slots[index] = AppItem(
+                                name = name,
+                                packageName = pkg.packageName,
+                                versionName = pkg.versionName ?: "N/A",
+                                versionCode = getVersionCode(pkg),
+                                sizeBytes = size,
+                                isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
+                                sourceDir = appInfo.sourceDir,
+                                // Icons are loaded lazily by AppIconLoader; decoding one
+                                // for every app made this list take seconds to appear.
+                                icon = null
+                            )
+                        }
+                        // The throttle lives here rather than in the caller: this
+                        // lambda runs on four worker threads, so a caller-side
+                        // counter would be mutated concurrently and would still be
+                        // entered once per package.
+                        val completed = done.incrementAndGet()
+                        val published = lastPublished.get()
+                        if (completed - published >= progressStride || completed >= total) {
+                            lastPublished.set(completed)
+                            onProgress?.invoke(completed, total)
+                        }
+                    }
                 }
-
-                appList.add(
-                    AppItem(
-                        name = name,
-                        packageName = pkg.packageName,
-                        versionName = pkg.versionName ?: "N/A",
-                        versionCode = getVersionCode(pkg),
-                        sizeBytes = size,
-                        isSystemApp = isSystem,
-                        sourceDir = appInfo.sourceDir,
-                        icon = icon
-                    )
-                )
+                start = to
             }
-            onProgress?.invoke(count, total)
+            pool.shutdown()
+            if (!pool.awaitTermination(60, java.util.concurrent.TimeUnit.SECONDS)) {
+                pool.shutdownNow()
+            }
+        } catch (e: InterruptedException) {
+            pool.shutdownNow()
+            Thread.currentThread().interrupt()
+            throw e
+        } finally {
+            pool.shutdown()
         }
+
+        val appList = ArrayList<AppItem>(total)
+        for (slot in slots) {
+            if (slot != null) appList.add(slot)
+        }
+        val tFieldsDone = SystemClock.elapsedRealtime()
 
         // Sort alphabetically by name
         appList.sortBy { it.name.lowercase(Locale.getDefault()) }
+        val tSortDone = SystemClock.elapsedRealtime()
+        AppListCache.recordTiming(
+            context,
+            "  breakdown: query=${tQueryDone - tQueryStart}ms label=${labelMs}ms " +
+                "size=${sizeMs}ms sort=${tSortDone - tFieldsDone}ms " +
+                "total=${tSortDone - tQueryStart}ms count=${appList.size} flags=$flags"
+        )
         return appList
     }
 
@@ -166,15 +238,28 @@ object AppInfoUtils {
         }
     }
 
-    fun getPackageArchiveInfo(context: Context, apkPath: String): PackageInfo? {
+    /**
+     * [fullComponents] requests activities, services, receivers, providers,
+     * permissions and signing certificates. That is a full manifest plus signature
+     * parse, so callers that only need a label or an icon should pass false.
+     */
+    fun getPackageArchiveInfo(
+        context: Context,
+        apkPath: String,
+        fullComponents: Boolean = true
+    ): PackageInfo? {
         val pm = context.packageManager
-        val flags = (PackageManager.GET_ACTIVITIES or
-                PackageManager.GET_SERVICES or
-                PackageManager.GET_RECEIVERS or
-                PackageManager.GET_PROVIDERS or
-                PackageManager.GET_PERMISSIONS or
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) PackageManager.GET_SIGNING_CERTIFICATES
-                else @Suppress("DEPRECATION") PackageManager.GET_SIGNATURES).toLong()
+        val flags = if (fullComponents) {
+            (PackageManager.GET_ACTIVITIES or
+                    PackageManager.GET_SERVICES or
+                    PackageManager.GET_RECEIVERS or
+                    PackageManager.GET_PROVIDERS or
+                    PackageManager.GET_PERMISSIONS or
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) PackageManager.GET_SIGNING_CERTIFICATES
+                    else @Suppress("DEPRECATION") PackageManager.GET_SIGNATURES).toLong()
+        } else {
+            0L
+        }
 
         val info = try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -184,6 +269,15 @@ object AppInfoUtils {
                 pm.getPackageArchiveInfo(apkPath, flags.toInt())
             }
         } catch (e: Exception) {
+            null
+        } ?: try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.getPackageArchiveInfo(apkPath, PackageManager.PackageInfoFlags.of(0L))
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageArchiveInfo(apkPath, 0)
+            }
+        } catch (_: Exception) {
             null
         } ?: return null
 

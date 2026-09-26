@@ -44,7 +44,7 @@ import java.io.BufferedReader
 import java.io.File
 import java.util.zip.ZipFile
 
-private data class ApkEntry(
+internal data class ApkEntry(
     val path: String,
     val name: String,
     val isDirectory: Boolean,
@@ -54,7 +54,7 @@ private data class ApkEntry(
     val lastModified: Long
 )
 
-private object ApkEntryReader {
+internal object ApkEntryReader {
     val textExtensions = setOf(
         "txt", "xml", "json", "properties", "pro", "cfg", "ini", "yml", "yaml",
         "md", "csv", "tsv", "html", "htm", "js", "jsx", "ts", "tsx", "css", "scss",
@@ -82,8 +82,22 @@ private object ApkEntryReader {
         if (extension in textExtensions) return true
         if (extension in binaryExtensions) return false
         if (path.endsWith(".xml") || path == "androidmanifest.xml") return true
+        val root = File(apkPath)
+        if (root.isDirectory) {
+            val file = File(root, entryPath)
+            if (!file.exists() || file.isDirectory) return false
+            return try {
+                file.inputStream().use { stream ->
+                    val buffer = ByteArray(4096)
+                    val count = stream.read(buffer)
+                    if (count <= 0) true else isTextContent(buffer, count)
+                }
+            } catch (e: Exception) {
+                false
+            }
+        }
         return try {
-            ZipFile(File(apkPath)).use { zip ->
+            ZipFile(root).use { zip ->
                 val entry = zip.getEntry(entryPath) ?: return false
                 val stream = zip.getInputStream(entry)
                 val buffer = ByteArray(4096)
@@ -117,10 +131,33 @@ private object ApkEntryReader {
     }
 
     fun listEntries(apkPath: String, directoryPath: String): List<ApkEntry> {
+        val root = File(apkPath)
+        if (root.isDirectory) {
+            val targetDir = if (directoryPath.isBlank()) root else File(root, directoryPath)
+            if (!targetDir.exists() || !targetDir.isDirectory) return emptyList()
+            val files = targetDir.listFiles() ?: return emptyList()
+            val prefix = if (directoryPath.isBlank()) "" else "$directoryPath/"
+            val entries = files.map { file ->
+                ApkEntry(
+                    path = prefix + file.name,
+                    name = file.name,
+                    isDirectory = file.isDirectory,
+                    size = if (file.isDirectory) 0L else file.length(),
+                    compressedSize = if (file.isDirectory) 0L else file.length(),
+                    crc = 0L,
+                    lastModified = file.lastModified()
+                )
+            }
+            return entries.sortedWith(
+                compareByDescending<ApkEntry> { it.isDirectory }
+                    .thenBy { it.name.lowercase() }
+            )
+        }
+
         val prefix = if (directoryPath.isBlank()) "" else "$directoryPath/"
         val entries = LinkedHashMap<String, ApkEntry>()
 
-        ZipFile(File(apkPath)).use { zip ->
+        ZipFile(root).use { zip ->
             val zipEntries = zip.entries()
             while (zipEntries.hasMoreElements()) {
                 val entry = zipEntries.nextElement()
@@ -167,7 +204,31 @@ private object ApkEntryReader {
         val extension = entryPath.substringAfterLast('.', "").lowercase()
         if (extension !in textExtensions) return null
 
-        return ZipFile(File(apkPath)).use { zip ->
+        val root = File(apkPath)
+        if (root.isDirectory) {
+            val file = File(root, entryPath)
+            if (!file.exists() || file.isDirectory) return null
+            return try {
+                file.bufferedReader().use { reader ->
+                    val builder = StringBuilder()
+                    val buffer = CharArray(8192)
+                    while (builder.length < MAX_TEXT_PREVIEW) {
+                        val count = reader.read(
+                            buffer,
+                            0,
+                            minOf(buffer.size, MAX_TEXT_PREVIEW - builder.length)
+                        )
+                        if (count <= 0) break
+                        builder.appendRange(buffer, 0, count)
+                    }
+                    builder.toString()
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+        return ZipFile(root).use { zip ->
             val entry = zip.getEntry(entryPath) ?: return@use null
             BufferedReader(zip.getInputStream(entry).reader()).use { reader ->
                 val builder = StringBuilder()
@@ -186,11 +247,14 @@ private object ApkEntryReader {
         }
     }
 
+    private val nativeExtensions = setOf("so", "dll", "dylib")
+    private val imageExtensions = setOf("png", "jpg", "jpeg", "webp", "gif", "bmp")
+
     fun iconRes(entry: ApkEntry): Int {
         val path = entry.path.lowercase()
         val extension = path.substringAfterLast('.', "")
         return when {
-            entry.isDirectory -> R.drawable.ic_folder_open
+            entry.isDirectory -> R.drawable.ic_folder_filled
             path.endsWith(".apk") || path.endsWith(".zip") || path.endsWith(".jar") -> {
                 R.drawable.ic_tool_extract
             }
@@ -201,7 +265,7 @@ private object ApkEntryReader {
                 path.endsWith(".webp") || path.endsWith(".gif") || path.endsWith(".svg") -> {
                 R.drawable.ic_file_image
             }
-            path.startsWith("lib/") || extension in setOf("so", "dll", "dylib") -> {
+            path.startsWith("lib/") || extension in nativeExtensions -> {
                 R.drawable.ic_file_native
             }
             extension in codeExtensions -> R.drawable.ic_file_code
@@ -225,7 +289,7 @@ private object ApkEntryReader {
                 path.endsWith(".webp") || path.endsWith(".gif") || path.endsWith(".svg") -> {
                 R.string.apk_entry_type_image
             }
-            path.startsWith("lib/") || extension in setOf("so", "dll", "dylib") -> {
+            path.startsWith("lib/") || extension in nativeExtensions -> {
                 R.string.apk_entry_type_native
             }
             extension in textExtensions -> R.string.apk_entry_type_text
@@ -240,7 +304,7 @@ private object ApkEntryReader {
             path.endsWith(".apk") -> "application/vnd.android.package-archive"
             path.endsWith(".xml") -> "text/xml"
             path.endsWith(".json") -> "application/json"
-            extension in setOf("png", "jpg", "jpeg", "webp", "gif", "bmp") -> "image/*"
+            extension in imageExtensions -> "image/*"
             extension in textExtensions -> "text/plain"
             else -> "application/octet-stream"
         }
@@ -256,6 +320,7 @@ class ApkBrowseActivity : AppCompatActivity() {
         const val EXTRA_PROJECT_NAME = "extra_project_name"
         private const val LOADING_SPINNER_DELAY_MS = 250L
         private const val KEY_APK_SORT = "apk_sort_type"
+        private const val SCROLL_TO_TOP_MIN_ITEMS = 100
 
         fun createIntent(context: Context, apkPath: String, projectName: String): Intent {
             return Intent(context, ApkBrowseActivity::class.java).apply {
@@ -377,6 +442,8 @@ class ApkBrowseActivity : AppCompatActivity() {
             onEntryClick = { entry ->
                 if (entry.isDirectory) {
                     openDirectory(entry.path)
+                } else if (entry.path.endsWith(".dex", ignoreCase = true) && !File(apkPath).isDirectory) {
+                    showDecompileConfirmDialog(entry)
                 } else {
                     showFile(entry)
                 }
@@ -409,7 +476,7 @@ class ApkBrowseActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val label = withContext(Dispatchers.IO) {
                 runCatching {
-                    AppInfoUtils.getPackageArchiveInfo(applicationContext, apkPath)
+                    AppInfoUtils.getPackageArchiveInfo(applicationContext, apkPath, fullComponents = false)
                         ?.applicationInfo
                         ?.loadLabel(packageManager)
                         ?.toString()
@@ -516,38 +583,38 @@ class ApkBrowseActivity : AppCompatActivity() {
         }
     }
 
+    private fun typeSortKey(entry: ApkEntry): String =
+        getString(ApkEntryReader.typeLabelRes(entry)).lowercase()
+
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun applySort(mode: SortMode) {
         sortMode = mode
         val dirFirst = compareByDescending<ApkEntry> { it.isDirectory }
+        // Sort keys are resolved once per entry here. Doing it inside the
+        // comparator meant a Resources.getString plus a fresh lowercase() string
+        // per comparison, which is roughly 9000 of each for a 500 entry folder.
+        val byName = compareBy<ApkEntry> { it.name.lowercase() }
+        val byType = compareBy<ApkEntry> { typeSortKey(it) }
         val sorted = when (mode) {
             SortMode.NAME -> loadedEntries.sortedWith(
-                if (foldersFirst) dirFirst.thenBy { it.name.lowercase() }
-                else compareBy { it.name.lowercase() }
+                if (foldersFirst) dirFirst.then(byName) else byName
             )
             SortMode.SIZE -> loadedEntries.sortedWith(
                 if (foldersFirst) {
-                    dirFirst.thenByDescending { it.size }.thenBy { it.name.lowercase() }
+                    dirFirst.thenByDescending { it.size }.then(byName)
                 } else {
-                    compareByDescending<ApkEntry> { it.size }.thenBy { it.name.lowercase() }
+                    compareByDescending<ApkEntry> { it.size }.then(byName)
                 }
             )
             SortMode.TYPE -> loadedEntries.sortedWith(
-                if (foldersFirst) {
-                    dirFirst
-                        .thenBy { getString(ApkEntryReader.typeLabelRes(it)).lowercase() }
-                        .thenBy { it.name.lowercase() }
-                } else {
-                    compareBy<ApkEntry> { getString(ApkEntryReader.typeLabelRes(it)).lowercase() }
-                        .thenBy { it.name.lowercase() }
-                }
+                if (foldersFirst) dirFirst.then(byType).then(byName) else byType.then(byName)
             )
             SortMode.DATE -> loadedEntries.sortedWith(
                 if (foldersFirst) {
-                    dirFirst.thenByDescending { it.lastModified }.thenBy { it.name.lowercase() }
+                    dirFirst.thenByDescending { it.lastModified }.then(byName)
                 } else {
-                    compareByDescending<ApkEntry> { it.lastModified }.thenBy { it.name.lowercase() }
+                    compareByDescending<ApkEntry> { it.lastModified }.then(byName)
                 }
             )
         }
@@ -567,7 +634,10 @@ class ApkBrowseActivity : AppCompatActivity() {
     }
 
     private fun updateScrollToTopButton(recyclerView: RecyclerView) {
-        val shouldShow = recyclerView.isVisible && recyclerView.canScrollVertically(-1)
+        val shouldShow = recyclerView.isVisible &&
+            recyclerView.adapter != null &&
+            recyclerView.adapter!!.itemCount >= SCROLL_TO_TOP_MIN_ITEMS &&
+            recyclerView.canScrollVertically(-1)
         val button = binding.btnScrollToTop
         if (shouldShow) {
             if (isScrollToTopButtonShown) return
@@ -615,6 +685,8 @@ class ApkBrowseActivity : AppCompatActivity() {
 
     private fun showFile(entry: ApkEntry) {
         val intent = when {
+            File(apkPath).isDirectory ->
+                SourceViewerActivity.createIntent(this, File(apkPath, entry.path).absolutePath, entry.name)
             isImageEntry(entry) ->
                 ApkImageViewerActivity.createIntent(this, apkPath, entry.path)
             isTextEntry(entry) ->
@@ -623,6 +695,23 @@ class ApkBrowseActivity : AppCompatActivity() {
                 ApkHexViewerActivity.createIntent(this, apkPath, entry.path)
         }
         startActivity(intent)
+    }
+
+    private fun showDecompileConfirmDialog(entry: ApkEntry) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.dialog_decompile_dex_title)
+            .setMessage(getString(R.string.dialog_decompile_dex_message, entry.name))
+            .setPositiveButton(R.string.dialog_decompile_confirm) { _, _ ->
+                val intent = DecompileActivity.createIntent(
+                    this,
+                    apkPath = apkPath,
+                    dexEntryPath = entry.path,
+                    projectName = binding.toolbar.title?.toString().orEmpty()
+                )
+                startActivity(intent)
+            }
+            .setNegativeButton(R.string.dialog_decompile_cancel, null)
+            .show()
     }
 
     private fun isImageEntry(entry: ApkEntry): Boolean {
@@ -671,7 +760,13 @@ class ApkBrowseActivity : AppCompatActivity() {
         applySegmentCornersForEntrySheet(content)
         content.findViewById<View>(R.id.action_preview).setOnClickListener {
             dialog.dismiss()
-            if (entry.isDirectory) openDirectory(entry.path) else showFile(entry)
+            if (entry.isDirectory) {
+                openDirectory(entry.path)
+            } else if (entry.path.endsWith(".dex", ignoreCase = true) && !File(apkPath).isDirectory) {
+                showDecompileConfirmDialog(entry)
+            } else {
+                showFile(entry)
+            }
         }
         content.findViewById<View>(R.id.action_share).setOnClickListener {
             dialog.dismiss()
@@ -718,11 +813,6 @@ class ApkBrowseActivity : AppCompatActivity() {
                 R.id.action_save_to,
                 R.id.action_share,
                 R.id.action_info
-            ),
-            listOf(
-                R.id.divider_preview_save,
-                R.id.divider_save_share,
-                R.id.divider_share_info
             )
         )
     }

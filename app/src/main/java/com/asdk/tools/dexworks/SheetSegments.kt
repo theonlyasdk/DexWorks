@@ -7,15 +7,16 @@ import androidx.core.view.isVisible
  * Assigns rounded segment backgrounds to a group of action rows so the first and last
  * visible rows always get the rounded ends, even when some rows are hidden.
  *
- * [dividerIds] must be ordered to match the gaps between consecutive entries of [rowIds].
+ * [dividerIds] is optional. Pass an empty list when the sheet deliberately has no
+ * divider lines between rows.
  */
 fun applySegmentCorners(
     content: View,
     rowIds: List<Int>,
-    dividerIds: List<Int>
+    dividerIds: List<Int> = emptyList()
 ) {
     val rows = rowIds.map { content.findViewById<View>(it) }
-    val dividers = dividerIds.map { content.findViewById<View>(it) }
+    val dividers = dividerIds.mapNotNull { content.findViewById<View?>(it) }
 
     val visible = rows.filter { it.isVisible }
     val visibleIds = visible.map { it.id }.toSet()

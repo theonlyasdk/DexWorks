@@ -101,7 +101,7 @@ class FileSaveHelper(
 
     fun saveApk(app: AppItem, forcePickLocation: Boolean = false) {
         val sourceFile = File(app.sourceDir)
-        val sanitizedAppName = app.name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val sanitizedAppName = app.name.replace(SanitizedNames.UNSAFE_CHARS, "_")
         val fileName = "${sanitizedAppName}_${app.versionName}.apk"
         saveFile(sourceFile, fileName, forcePickLocation)
     }
@@ -111,7 +111,7 @@ class FileSaveHelper(
         val context = contextProvider()
         val appName = pkg.applicationInfo?.loadLabel(context.packageManager)?.toString()?.ifBlank { pkg.packageName } ?: pkg.packageName
         val versionName = pkg.versionName ?: "1.0"
-        val sanitizedAppName = appName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val sanitizedAppName = appName.replace(SanitizedNames.UNSAFE_CHARS, "_")
         val fileName = "${sanitizedAppName}_${versionName}.apk"
         saveFile(sourceFile, fileName, forcePickLocation)
     }
@@ -122,7 +122,7 @@ class FileSaveHelper(
 
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         val defaultZipName = if (apps.size == 1) {
-            val sanitized = apps.first().name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+            val sanitized = apps.first().name.replace(SanitizedNames.UNSAFE_CHARS, "_")
             "${sanitized}_${apps.first().versionName}.zip"
         } else {
             "DexWorks_APKs_${timestamp}.zip"
@@ -160,7 +160,7 @@ class FileSaveHelper(
     }
 
     fun saveIcon(drawable: Drawable, appName: String, forcePickLocation: Boolean = false) {
-        val sanitizedAppName = appName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val sanitizedAppName = appName.replace(SanitizedNames.UNSAFE_CHARS, "_")
         val fileName = "${sanitizedAppName}_icon.png"
 
         val rememberedUri = if (!forcePickLocation) getRememberedLocation() else null
@@ -368,31 +368,40 @@ class FileSaveHelper(
                             ZipOutputStream(BufferedOutputStream(outStream)).use { zipOut ->
                                 val buffer = ByteArray(64 * 1024)
                                 val addedNames = mutableSetOf<String>()
-                                val fileSizes = apps.map { app ->
-                                    val f = File(app.sourceDir)
-                                    if (f.exists()) f.length() else 0L
+                                // Resolve each File once: the old code built the
+                                // File and stat'ed it twice per app, once in this
+                                // pre-pass and again in the loop below.
+                                val sources = apps.map { app ->
+                                    File(app.sourceDir)
                                 }
+                                val fileSizes = sources.map { it.length() }
                                 val totalBytes = fileSizes.sum().coerceAtLeast(1L)
                                 var completedBytes = 0L
                                 var lastNotified = -1
 
                                 for ((index, app) in apps.withIndex()) {
-                                    withContext(Dispatchers.Main) {
-                                        textStatus.text = context.getString(
-                                            R.string.dialog_compressing_progress,
-                                            index + 1,
-                                            apps.size,
-                                            app.name
-                                        )
+                                    // Throttled to the same cadence as the byte
+                                    // progress bar; this was a main thread round
+                                    // trip and a formatted string per app.
+                                    if (index - lastNotified >= 2 || index == apps.lastIndex) {
+                                        lastNotified = index
+                                        withContext(Dispatchers.Main) {
+                                            textStatus.text = context.getString(
+                                                R.string.dialog_compressing_progress,
+                                                index + 1,
+                                                apps.size,
+                                                app.name
+                                            )
+                                        }
                                     }
 
-                                    val sourceFile = File(app.sourceDir)
-                                    if (!sourceFile.exists()) {
+                                    val sourceFile = sources[index]
+                                    if (sourceFile.length() == 0L) {
                                         completedBytes += fileSizes[index]
                                         continue
                                     }
 
-                                    val sanitized = app.name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                                    val sanitized = app.name.replace(SanitizedNames.UNSAFE_CHARS, "_")
                                     var entryName = "${sanitized}_${app.versionName}.apk"
                                     var nameIndex = 1
                                     while (addedNames.contains(entryName)) {

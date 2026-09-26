@@ -4,7 +4,6 @@
     <!-- Navigation titles -->
     <string name="title_browse">Browse</string>
     <string name="title_projects">Projects</string>
-    <string name="title_tools">Tools</string>
     <string name="not_yet_implemented">Not yet implemented</string>
 
     <!-- Browse tab -->
@@ -101,6 +100,13 @@
     <string name="viewer_copy_text">Copy text</string>
     <string name="viewer_unobfuscate">Unobfuscate</string>
     <string name="viewer_prettify">Prettify</string>
+    <string name="viewer_format_json">Format JSON</string>
+    <string name="action_uninstall_app">Uninstall app</string>
+    <string name="confirm_uninstall_title">Uninstall %1$s?</string>
+    <string name="confirm_uninstall_message">This will remove the app and all of its data from this device.</string>
+    <string name="confirm_uninstall_positive">Uninstall</string>
+    <string name="uninstall_failed">Could not uninstall the app</string>
+    <string name="uninstall_no_launcher">This app cannot be uninstalled from here</string>
     <string name="viewer_transform_applied">%1$s applied</string>
     <string name="viewer_no_changes">Nothing to change</string>
     <string name="viewer_unobfuscate_summary">%1$d strings resolved from %2$d arrays, %3$d expressions folded</string>
@@ -213,7 +219,7 @@
 
     <!-- Tools tab -->
     <string name="tool_decompiler_name">Decompiler</string>
-    <string name="tool_decompiler_desc">Decompile DEX bytecode into readable Java/Kotlin source</string>
+    <string name="tool_decompiler_desc">Decompile DEX bytecode into Java source or Smali</string>
     <string name="tool_disassembler_name">Disassembler</string>
     <string name="tool_disassembler_desc">Disassemble DEX into Smali assembly representation</string>
     <string name="tool_extractor_name">APK Extractor</string>
@@ -485,14 +491,54 @@
     <string name="settings_about_version">Version %1$s</string>
     <string name="settings_about_close">Close</string>
 
-    <!-- Vibration tester -->
-    <string name="vibration_title">Vibration Test</string>
+    <!-- Tools tab additional -->
+    <string name="tool_vibrate_name">Haptics &amp; Vibration Lab</string>
+    <string name="tool_vibrate_desc">Interactive 2D waveform visualizer, pattern editor &amp; impulse benchmarks</string>
+
+    <!-- Vibration tester & 2D Visualizer -->
+    <string name="vibration_title">Haptics &amp; Vibration Lab</string>
+    <string name="vibration_hardware_title">Hardware Capabilities</string>
+    <string name="vibration_hardware_motor">Vibration Motor</string>
+    <string name="vibration_status_available">Available</string>
+    <string name="vibration_status_unavailable">Unavailable</string>
+    <string name="vibration_amplitude_control">Amplitude Control</string>
+    <string name="vibration_composition_primitives">Primitives</string>
+    <string name="vibration_supported">Supported</string>
+    <string name="vibration_unsupported">Unsupported</string>
     <string name="vibration_capability_full">Vibrator available. Amplitude control: %1$s. Composition primitives: %2$s.</string>
     <string name="vibration_capability_none">This device has no vibrator.</string>
     <string name="vibration_yes">yes</string>
     <string name="vibration_no">no</string>
+    <string name="vibration_section_visualizer">Waveform Visualizer</string>
+    <string name="vibration_visualizer_desc">Amplitude (0–255) over Time (ms)</string>
+    <string name="vibration_waveform_type">Waveform Mode</string>
+    <string name="vibration_type_discrete">Discrete</string>
+    <string name="vibration_type_sine">Sine</string>
+    <string name="vibration_type_square">Square</string>
+    <string name="vibration_type_sawtooth">Sawtooth</string>
+    <string name="vibration_type_triangle">Triangle</string>
+    <string name="vibration_type_chirp">Chirp</string>
+    <string name="vibration_add_point">Add Point</string>
+    <string name="vibration_remove_point">Remove</string>
+    <string name="vibration_points_count">Points (%1$d)</string>
+    <string name="vibration_frequency">Frequency: %1$d Hz</string>
+    <string name="vibration_frequency_float">Frequency: %1$.1f Hz</string>
+    <string name="vibration_lfo_title">Frequency LFO / Modulation</string>
+    <string name="vibration_lfo_enable">Frequency Modulation (LFO)</string>
+    <string name="vibration_lfo_shape_ramp">Ramp Up (Sweep)</string>
+    <string name="vibration_lfo_shape_sine">Sine LFO</string>
+    <string name="vibration_lfo_rate">LFO Rate: %1$.1f Hz</string>
+    <string name="vibration_lfo_depth">Modulation Depth: +%1$d Hz</string>
+    <string name="vibration_chirp_end_freq">End Frequency: %1$d Hz</string>
+    <string name="vibration_duty_cycle">Duty Cycle: %1$d%%</string>
+    <string name="vibration_total_duration">Total Duration: %1$d ms</string>
+    <string name="vibration_total_duration_sec">Total Duration: %1$.1f s</string>
+    <string name="vibration_step_title">Point #%1$d</string>
+    <string name="vibration_delete_point">Delete</string>
+    <string name="vibration_play">Play</string>
+    <string name="vibration_loop">Loop</string>
     <string name="vibration_section_single">Single pulse</string>
-    <string name="vibration_section_pattern">Custom pattern</string>
+    <string name="vibration_section_pattern">Waveform &amp; Pattern Generator</string>
     <string name="vibration_section_tests">Preset tests</string>
     <string name="vibration_duration">Duration: %1$d ms</string>
     <string name="vibration_amplitude">Amplitude: %1$d</string>
@@ -500,12 +546,147 @@
     <string name="vibration_step">Step %1$d on: %2$d ms</string>
     <string name="vibration_repeat">Repeat pattern</string>
     <string name="vibration_run">Vibrate</string>
-    <string name="vibration_run_pattern">Run pattern</string>
     <string name="vibration_stop">Stop</string>
     <string name="vibration_preview">timings %1$s amplitudes %2$s repeat %3$d</string>
-    <string name="vibration_tests_summary">Short factory-style impulses. Test 2 mimics the O-Haptics tap used on Oppo phones, which needs Android 11 or newer to feel accurate.</string>
-    <string name="vibration_test_1">Test 1: double tap</string>
-    <string name="vibration_test_2">Test 2: O-Haptics style (Oppo)</string>
-    <string name="vibration_test_3">Test 3: heartbeat</string>
+    <string name="vibration_section_oneshots">One-Shot Impulses</string>
+    <string name="vibration_oneshots_summary">Crisp tactile clicks, single taps, and benchmark pulses</string>
+    <string name="vibration_section_looping_rhythms">Looping Rhythms</string>
+    <string name="vibration_looping_summary">Rhythmic sequences, repeating patterns, and continuous cycles</string>
+
+    <!-- One-Shots (8 presets) -->
+    <string name="vibration_oneshot_1_title">Test 1: Double Tap</string>
+    <string name="vibration_oneshot_1_desc">Quick sharp 18ms double pulse</string>
+    <string name="vibration_oneshot_2_title">Test 2: O-Haptics Click</string>
+    <string name="vibration_oneshot_2_desc">Ultra-crisp 12ms tactile feedback</string>
+    <string name="vibration_oneshot_3_title">Test 3: Heartbeat Pulse</string>
+    <string name="vibration_oneshot_3_desc">Heavy 45ms beat followed by 22ms echo</string>
+    <string name="vibration_oneshot_4_title">Test 4: Heavy Thud</string>
+    <string name="vibration_oneshot_4_desc">Strong 65ms deep haptic impact</string>
+    <string name="vibration_oneshot_5_title">Test 5: Soft Tick</string>
+    <string name="vibration_oneshot_5_desc">Gentle 8ms subtle micro-interaction</string>
+    <string name="vibration_oneshot_6_title">Test 6: Triple Tap Strum</string>
+    <string name="vibration_oneshot_6_desc">Three cascading 15ms rapid pulses</string>
+    <string name="vibration_oneshot_7_title">Test 7: Rising Knock</string>
+    <string name="vibration_oneshot_7_desc">Ascending two-step knock impulse</string>
+    <string name="vibration_oneshot_8_title">Test 8: Success Chime</string>
+    <string name="vibration_oneshot_8_desc">Pleasant melodic two-tier notification</string>
+
+    <!-- Looping Rhythms (7 presets) -->
+    <string name="vibration_loop_1_title">Preset 1: Arcade Rhythm</string>
+    <string name="vibration_loop_1_desc">Syncopated 4-step arcade bounce</string>
+    <string name="vibration_loop_2_title">Preset 2: Rapid Staccato</string>
+    <string name="vibration_loop_2_desc">Fast 4-pulse staccato burst</string>
+    <string name="vibration_loop_3_title">Preset 3: Engine Idle</string>
+    <string name="vibration_loop_3_desc">25 Hz continuous sine wave rumble</string>
+    <string name="vibration_loop_4_title">Preset 4: Siren Alert</string>
+    <string name="vibration_loop_4_desc">10 Hz to 60 Hz rising chirp cycle</string>
+    <string name="vibration_loop_5_title">Preset 5: Pulse Wave</string>
+    <string name="vibration_loop_5_desc">4 Hz square pulse with 20% duty cycle</string>
+    <string name="vibration_loop_6_title">Preset 6: Morse SOS</string>
+    <string name="vibration_loop_6_desc">Standard 3 short, 3 long, 3 short loop</string>
+    <string name="vibration_loop_7_title">Preset 7: Breathing Ramp</string>
+    <string name="vibration_loop_7_desc">0.5 Hz slow triangle wave breathing swell</string>
+
+    <!-- Voice Responsive Vibration -->
+    <string name="vibration_voice_title">Voice Responsive Vibration</string>
+    <string name="vibration_voice_desc">Real-time tactile response driven by live microphone audio</string>
+    <string name="vibration_voice_start">Start Listening</string>
+    <string name="vibration_voice_stop">Stop Listening</string>
+    <string name="vibration_voice_sensitivity">Sensitivity: %1$dx</string>
+    <string name="vibration_voice_input_level">Live Input Level: %1$d%%</string>
+    <string name="vibration_voice_permission_denied">Microphone permission is required to use voice responsive vibration</string>
+
     <string name="vibration_about_hint">Opens the vibration tester</string>
+
+    <!-- APK Analysis -->
+    <string name="apk_browse_analyze">Analyze</string>
+    <string name="title_apk_analysis">APK Analysis</string>
+    <string name="apk_analysis_subtitle">Inspect frameworks, architectures, and internal components</string>
+    <string name="analysis_module_framework_title">Framework Analysis</string>
+    <string name="analysis_module_framework_desc">Detect app frameworks (Flutter, React Native, Unity, Compose, Xamarin, Cordova)</string>
+    <string name="analysis_module_arch_title">Architecture &amp; Native Libraries</string>
+    <string name="analysis_module_arch_desc">Inspect supported ABIs, native .so binaries, and architecture dependencies</string>
+    <string name="analysis_module_security_title">Protection &amp; Obfuscation</string>
+    <string name="analysis_module_security_desc">Check for code shrinking (R8/ProGuard), DEX packers, and hardening wrappers</string>
+    <string name="title_analysis_results">Analysis Results</string>
+    <string name="analysis_analyzing">Analyzing APK contents…</string>
+    <string name="analysis_analyzing_subtitle">Scanning package entries and binary signatures</string>
+    <string name="analysis_result_primary_framework">Primary Framework</string>
+    <string name="analysis_result_confidence">Confidence: %1$s</string>
+    <string name="analysis_result_confidence_high">High Confidence</string>
+    <string name="analysis_result_confidence_medium">Moderate Confidence</string>
+    <string name="analysis_result_confidence_low">Heuristic / Low</string>
+    <string name="analysis_result_matched_evidence">Matched File Evidence (%1$d)</string>
+    <string name="analysis_result_no_evidence">No matching signature files discovered</string>
+    <string name="analysis_result_secondary_frameworks">Detected Components &amp; Libraries</string>
+    <string name="analysis_result_abis_title">Supported Architectures (ABIs)</string>
+    <string name="analysis_result_libraries_title">Discovered Native Binaries (%1$d)</string>
+    <string name="analysis_result_protection_title">Protection &amp; Hardening Status</string>
+    <string name="analysis_result_error">Unable to analyze APK file</string>
+    <string name="analysis_result_error_desc">The APK file could not be read or is invalid.</string>
+    <string name="analysis_run_again">Re-analyze</string>
+    <string name="analysis_result_open_evidence">Open in viewer</string>
+    <string name="analysis_result_evidence_unavailable">Could not open this file</string>
+
+    <!-- Decompile Pipeline -->
+    <string name="dialog_decompile_dex_title">Decompile DEX file</string>
+    <string name="dialog_decompile_dex_message">Do you want to decompile %1$s?</string>
+    <string name="dialog_decompile_confirm">Decompile</string>
+    <string name="dialog_decompile_cancel">Cancel</string>
+    <string name="title_decompile">Decompile DEX</string>
+    <string name="decompile_format_title">Output Format</string>
+    <string name="decompile_format_smali">Smali</string>
+    <string name="decompile_format_smali_desc">Disassemble bytecode to readable Dalvik assembly via baksmali</string>
+    <string name="decompile_format_java">Java</string>
+    <string name="decompile_format_java_desc">Decompile bytecode to structured Java source code via CFR</string>
+    <string name="decompile_advanced_title">Advanced Options</string>
+    <string name="decompile_option_reg_info">Annotate register types and info</string>
+    <string name="decompile_option_locals">Preserve locals directives</string>
+    <string name="decompile_option_sugar">Desugar Java constructs</string>
+    <string name="decompile_option_deobfuscate">Rename invalid or duplicate identifiers</string>
+    <string name="decompile_start">Start Decompilation</string>
+    <string name="decompile_cancel">Cancel decompilation</string>
+    <string name="decompile_stop">Stop</string>
+    <string name="decompile_cancel_title">Cancel decompilation?</string>
+    <string name="decompile_cancel_message">The current operation will stop and partial output will be discarded.</string>
+    <string name="decompile_cancelled">Decompilation cancelled.</string>
+    <string name="decompile_cancelled_title">Decompilation cancelled</string>
+    <string name="decompile_choose_dex_title">Choose a DEX file</string>
+    <string name="decompile_choose_dex_message">Select the DEX file to decompile.</string>
+    <string name="decompile_scanning_dex">Finding DEX files…</string>
+    <string name="decompile_error_title">Could not start decompilation</string>
+    <string name="decompile_error_missing_apk">The selected APK is no longer available.</string>
+    <string name="decompile_error_invalid_apk">This file could not be opened as an APK.</string>
+    <string name="decompile_error_no_dex">No DEX files were found in this APK.</string>
+    <string name="decompile_error_copy_apk">Could not read the selected APK.</string>
+    <string name="decompile_requires_apk">Import an APK into this project before decompiling it.</string>
+    <string name="decompile_error_output">No source files were produced. Check the decompiler log for details.</string>
+    <string name="decompile_running_title">Decompiling…</string>
+    <string name="decompile_running_status">Processing %1$s as %2$s</string>
+    <string name="decompile_elapsed_time">Elapsed: %1$s</string>
+    <string name="decompile_logs_title">Decompiler Log</string>
+    <string name="decompile_logs_collapse">Hide log</string>
+    <string name="decompile_logs_expand">Show log</string>
+    <string name="decompile_completed">Decompilation Complete</string>
+    <string name="decompile_failed">Decompilation Failed</string>
+    <string name="decompile_view_results">Browse Decompiled Output</string>
+    <string name="title_source_viewer">Source Viewer</string>
+    <string name="analysis_action_analyze">Analyze</string>
+    <string name="project_action_open">Open project</string>
+    <string name="project_action_app_details">App details</string>
+    <string name="project_action_decompile">Decompile</string>
+    <string name="project_action_browse">Browse APK</string>
+    <string name="project_action_manifest">View manifest</string>
+    <string name="project_action_save_apk">Save APK to…</string>
+    <string name="project_action_analyze">Analyze</string>
+    <string name="project_action_delete">Delete</string>
+    <string name="project_delete_title">Delete project?</string>
+    <string name="project_delete_message">“%1$s” and all of its files will be permanently removed.</string>
+    <string name="project_delete_confirm">Delete</string>
+    <string name="project_deleted">Deleted “%1$s”.</string>
+    <string name="project_delete_failed">Could not delete this project.</string>
+    <string name="project_exists_title">Project already exists</string>
+    <string name="project_exists_message">A project called “%1$s” is already in your projects. Open the existing one, or create a second copy?</string>
+    <string name="project_exists_open">Open existing</string>
+    <string name="project_exists_create">Create copy</string>
 </resources>

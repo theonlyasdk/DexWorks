@@ -73,6 +73,7 @@ class BrowseFragment : Fragment() {
 
     private var allInstalledApps: List<AppItem> = emptyList()
     private var displayedApps: List<AppItem> = emptyList()
+    private val iconLoader = AppIconLoader()
     private var showSystemApps: Boolean = false
 
     private var isSelectionMode: Boolean = false
@@ -205,7 +206,10 @@ class BrowseFragment : Fragment() {
     }
 
     private fun updateScrollToTopButton(recyclerView: RecyclerView) {
-        val shouldShow = recyclerView.isVisible && recyclerView.canScrollVertically(-1)
+        val shouldShow = recyclerView.isVisible &&
+            recyclerView.adapter != null &&
+            recyclerView.adapter!!.itemCount >= SCROLL_TO_TOP_MIN_ITEMS &&
+            recyclerView.canScrollVertically(-1)
         val button = binding.btnScrollToTop
         if (shouldShow) {
             if (isScrollToTopButtonShown) return
@@ -238,23 +242,45 @@ class BrowseFragment : Fragment() {
     }
 
     private fun loadInstalledApps(isSwipeRefresh: Boolean = false) {
-        if (!isSwipeRefresh) {
-            binding.layoutLoading.isVisible = true
-            binding.layoutSortFilterBar.isVisible = false
-            binding.recyclerApps.isVisible = false
-            binding.layoutEmpty.isVisible = false
-            updateScrollToTopButton(binding.recyclerApps)
-            binding.fastScroller.hideNow()
-            binding.textLetterPreview.animate().cancel()
-            binding.textLetterPreview.alpha = 1f
-            binding.textLetterPreview.isVisible = false
-            binding.progressLoading.progress = 0
-            binding.textLoadingProgress.text = getString(R.string.loading_apps)
-        }
+        val tStart = android.os.SystemClock.elapsedRealtime()
 
         viewLifecycleOwner.lifecycleScope.launch {
+            // Show the previous result straight away. Enumerating packages means
+            // parsing every installed APK manifest and resolving every app label,
+            // which on a device with 400+ apps is the entire cost of this screen.
+            // The refresh below replaces it once real data arrives, so the list is
+            // never empty and never waits on PackageManager.
+            if (!isSwipeRefresh) {
+                val cached = withContext(Dispatchers.IO) { AppListCache.load(requireContext()) }
+                if (!cached.isNullOrEmpty()) {
+                    allInstalledApps = cached
+                    binding.layoutLoading.isVisible = false
+                    binding.layoutSortFilterBar.isVisible = true
+                    binding.recyclerApps.isVisible = true
+                    applyDisplayFilter()
+                    AppListCache.recordTiming(
+                        requireContext(),
+                        "cache-render=${android.os.SystemClock.elapsedRealtime() - tStart}ms " +
+                            "count=${cached.size}"
+                    )
+                } else {
+                    showLoadingUi()
+                }
+            }
+
+            val tLoadStart = android.os.SystemClock.elapsedRealtime()
+            // Labels already resolved on a previous run are reused. This is the
+            // single biggest win: resolving a label loads that app's resources and
+            // dominated the load time, but the answer rarely changes.
+            val knownNames = allInstalledApps.associate { it.packageName to it.name }
             val apps = withContext(Dispatchers.IO) {
-                AppInfoUtils.getInstalledApps(requireContext()) { loaded, total ->
+                // Progress is throttled inside the helper, which knows how many
+                // workers are running and can use an atomic counter.
+                AppInfoUtils.getInstalledApps(
+                    requireContext(),
+                    knownNames,
+                    PROGRESS_STEP
+                ) { loaded, total ->
                     if (!isSwipeRefresh) {
                         launch(Dispatchers.Main) {
                             if (_binding != null) {
@@ -269,6 +295,7 @@ class BrowseFragment : Fragment() {
             }
 
             allInstalledApps = apps
+            withContext(Dispatchers.IO) { AppListCache.save(requireContext(), apps) }
             (activity as? MainActivity)?.updateInstalledApps(apps)
             binding.layoutLoading.isVisible = false
             if (isSwipeRefresh && _binding != null) {
@@ -282,7 +309,26 @@ class BrowseFragment : Fragment() {
             }
             binding.swipeRefresh.isRefreshing = false
             applyDisplayFilter()
+            AppListCache.recordTiming(
+                requireContext(),
+                "refresh=${android.os.SystemClock.elapsedRealtime() - tLoadStart}ms " +
+                    "count=${apps.size}"
+            )
         }
+    }
+
+    private fun showLoadingUi() {
+        binding.layoutLoading.isVisible = true
+        binding.layoutSortFilterBar.isVisible = false
+        binding.recyclerApps.isVisible = false
+        binding.layoutEmpty.isVisible = false
+        updateScrollToTopButton(binding.recyclerApps)
+        binding.fastScroller.hideNow()
+        binding.textLetterPreview.animate().cancel()
+        binding.textLetterPreview.alpha = 1f
+        binding.textLetterPreview.isVisible = false
+        binding.progressLoading.progress = 0
+        binding.textLoadingProgress.text = getString(R.string.loading_apps)
     }
 
     private fun enterSelectionMode(initialApp: AppItem) {
@@ -519,8 +565,12 @@ class BrowseFragment : Fragment() {
             }
         }
 
+        val tFilterStart = android.os.SystemClock.elapsedRealtime()
         val currentAdapter = binding.recyclerApps.adapter as? AppAdapter
-        if (currentAdapter != null && currentAdapter.items === displayedApps) {
+        if (currentAdapter != null) {
+            // Reuse the adapter and diff, instead of rebuilding it and rebinding
+            // every one of the several hundred rows on each refresh.
+            currentAdapter.submit(displayedApps)
             currentAdapter.updateSelection(selectedPackageNames, isSelectionMode)
         } else {
             binding.recyclerApps.adapter = AppAdapter(
@@ -552,9 +602,15 @@ class BrowseFragment : Fragment() {
                 },
                 onSaveApkToClick = { app ->
                     saveApk(app)
-                }
+                },
+                iconLoader = iconLoader
             )
         }
+        android.util.Log.d(
+            "AppLoad",
+            "bind: filter+sort+adapter=${android.os.SystemClock.elapsedRealtime() - tFilterStart}ms " +
+                "shown=${displayedApps.size}"
+        )
     }
 
     fun saveApk(app: AppItem) {
@@ -603,6 +659,7 @@ class BrowseFragment : Fragment() {
         backPressedCallback = null
         preferences.unregisterOnSharedPreferenceChangeListener(prefsListener)
         binding.recyclerApps.removeCallbacks(applyScrubPositionRunnable)
+        iconLoader.clear()
         pendingScrubPosition = RecyclerView.NO_POSITION
         scrubPosted = false
         _binding = null
@@ -610,22 +667,68 @@ class BrowseFragment : Fragment() {
 
     companion object {
         private const val PREF_SHOW_SYSTEM_APPS = AppPrefs.KEY_SHOW_SYSTEM_APPS
+        private const val PROGRESS_STEP = 8
+        private const val SCROLL_TO_TOP_MIN_ITEMS = 100
     }
 
     class AppAdapter(
-        val items: List<AppItem>,
+        items: List<AppItem>,
         private var selectedPackages: Set<String> = emptySet(),
         private var isSelectionMode: Boolean = false,
         private val onItemClick: (AppItem) -> Unit,
         private val onItemLongClick: (AppItem, Int) -> Unit = { _, _ -> },
         private val onAvatarClick: (AppItem) -> Unit = {},
-        private val onSaveApkToClick: (AppItem) -> Unit
+        private val onSaveApkToClick: (AppItem) -> Unit,
+        private val iconLoader: AppIconLoader = AppIconLoader()
     ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
 
+        var items: List<AppItem> = items
+            private set
+
+        private val sizeTextCache = HashMap<Long, String>()
+        private var adapterContext: Context? = null
+        private val systemAppBadgeText: String
+            get() = adapterContext?.getString(R.string.badge_system_app).orEmpty()
+
+        /** Swaps in a new list, rebinding only the rows that actually changed. */
+        fun submit(newItems: List<AppItem>) {
+            if (newItems === items) return
+            val old = items
+            items = newItems
+            applyDisplayFilterDiff(old, newItems)
+        }
+
+        private fun applyDisplayFilterDiff(old: List<AppItem>, new: List<AppItem>) {
+            val diff = object : androidx.recyclerview.widget.DiffUtil.Callback() {
+                override fun getOldListSize(): Int = old.size
+                override fun getNewListSize(): Int = new.size
+                override fun areItemsTheSame(oldPos: Int, newPos: Int): Boolean =
+                    old[oldPos].packageName == new[newPos].packageName
+                override fun areContentsTheSame(oldPos: Int, newPos: Int): Boolean =
+                    old[oldPos] == new[newPos]
+            }
+            androidx.recyclerview.widget.DiffUtil.calculateDiff(diff).dispatchUpdatesTo(this)
+        }
+
         fun updateSelection(selected: Set<String>, selectionMode: Boolean) {
-            this.selectedPackages = HashSet(selected)
-            this.isSelectionMode = selectionMode
-            notifyDataSetChanged()
+            if (selectedPackages == selected && isSelectionMode == selectionMode) return
+            val previous = selectedPackages
+            selectedPackages = HashSet(selected)
+            isSelectionMode = selectionMode
+            // During a drag select this runs on every finger movement. Rebinding the
+            // whole list each time meant re-binding all several hundred rows per
+            // touch event, so only the rows whose selected state actually flipped
+            // are refreshed.
+            if (items.isEmpty()) {
+                notifyDataSetChanged()
+                return
+            }
+            val flipped = items.indices.filter { index ->
+                val pkg = items[index].packageName
+                (pkg in previous) != (pkg in selectedPackages) ||
+                    (pkg in selectedPackages) && isSelectionMode
+            }
+            if (flipped.isEmpty()) notifyDataSetChanged() else flipped.forEach { notifyItemChanged(it) }
         }
 
         class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -641,6 +744,7 @@ class BrowseFragment : Fragment() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            if (adapterContext == null) adapterContext = parent.context
             val view = LayoutInflater.from(parent.context)
                 .inflate(R.layout.item_browse_app, parent, false)
             return ViewHolder(view)
@@ -663,14 +767,19 @@ class BrowseFragment : Fragment() {
             if (item.icon != null) {
                 holder.iconView.setImageDrawable(item.icon)
             } else {
-                holder.iconView.setImageResource(R.drawable.ic_app_placeholder)
+                iconLoader.load(item.packageName, holder.iconView)
             }
 
             holder.nameView.text = item.name
             holder.packageView.text = item.packageName
-            val formattedSize = AppInfoUtils.formatFileSize(item.sizeBytes)
+            // Memoised so scrolling back to a row does not re-run the three
+            // String.format calls inside formatFileSize for every bind.
+            val sizeBytes = item.sizeBytes
+            val formattedSize = sizeTextCache.getOrPut(sizeBytes) {
+                AppInfoUtils.formatFileSize(sizeBytes)
+            }
             holder.infoView.text = if (item.isSystemApp) {
-                "${holder.itemView.context.getString(R.string.badge_system_app)} • ${item.versionName} • $formattedSize"
+                "$systemAppBadgeText • ${item.versionName} • $formattedSize"
             } else {
                 "${item.versionName} • $formattedSize"
             }

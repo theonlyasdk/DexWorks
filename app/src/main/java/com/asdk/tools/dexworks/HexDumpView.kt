@@ -270,6 +270,32 @@ class HexDumpView @JvmOverloads constructor(
         return true
     }
 
+    /**
+     * Scrolls so the given byte sits in the middle of the visible area, both
+     * vertically and horizontally.
+     *
+     * [bottomInset] is subtracted from the usable height, so a byte is centred in
+     * what the user can actually see rather than behind an expanded bottom sheet.
+     */
+    fun centerOffsetInView(offset: Long): Boolean {
+        val dataIndex = (offset - baseOffset).toInt()
+        if (dataIndex < 0 || dataIndex >= data.size) return false
+        val row = dataIndex / BYTES_PER_ROW
+        val column = dataIndex % BYTES_PER_ROW
+
+        val visibleHeight = (height - bottomInset).coerceAtLeast(rowHeight.toInt())
+        val rowCenter = (padding + row * rowHeight + rowHeight / 2f) * scaleFactor
+        scrollY = (rowCenter - visibleHeight / 2f).coerceIn(0f, maxScrollY)
+
+        val hexStart = padding + offsetColW
+        val cellStart = hexStart + column * byteCellW + if (column >= 8) groupGap else 0f
+        val cellCenter = (cellStart + byteCellW / 2f) * scaleFactor
+        scrollX = (cellCenter - width / 2f).coerceIn(0f, maxScrollX)
+
+        invalidate()
+        return true
+    }
+
     private fun ensureOffsetVisible(offset: Long) {
         val dataIndex = (offset - baseOffset).toInt()
         if (dataIndex < 0 || dataIndex >= data.size) return

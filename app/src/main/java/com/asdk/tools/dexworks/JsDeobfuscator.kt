@@ -37,6 +37,18 @@ object JsDeobfuscator {
         "case", "do", "else", "yield", "await"
     )
 
+    // Fixed patterns are compiled once. They used to be rebuilt for every code
+    // segment on every deobfuscation pass, which is a lot of wasted compilation
+    // on a large minified bundle.
+    private val OBFUSCATED_NAME = Regex("^_0x[0-9a-f]+$", RegexOption.IGNORE_CASE)
+    private val BASE64_BLOB = Regex("^[A-Za-z0-9+/]{16,}={0,2}$")
+    private val WHITESPACE = Regex("\\s+")
+    private val DEBUGGER_STATEMENT = Regex("\\bdebugger\\s*;?")
+    private val NOT_NOT_EMPTY_ARRAY = Regex("!\\s*!\\s*\\[\\s*\\]")
+    private val NOT_EMPTY_ARRAY = Regex("!\\s*\\[\\s*\\]")
+    private val NOT_NOT_EMPTY_STRING = Regex("!\\s*!\\s*''")
+    private val NOT_EMPTY_STRING = Regex("!\\s*''")
+
     private data class StringArray(
         val name: String,
         val values: List<String>,
@@ -179,7 +191,7 @@ object JsDeobfuscator {
     }
 
     private fun looksObfuscated(name: String): Boolean =
-        Regex("^_0x[0-9a-f]+$", RegexOption.IGNORE_CASE).matches(name)
+        OBFUSCATED_NAME.matches(name)
 
     /**
      * Treats an array as still encoded when most entries are long base64 blobs
@@ -187,7 +199,7 @@ object JsDeobfuscator {
      */
     private fun looksEncoded(values: List<String>): Boolean {
         if (values.isEmpty()) return false
-        val blob = Regex("^[A-Za-z0-9+/]{16,}={0,2}$")
+        val blob = BASE64_BLOB
         val suspicious = values.count { blob.matches(it) }
         if (suspicious * 10 < values.size * 6) return false
         val decodesToText = values.filter { blob.matches(it) }.count {
@@ -235,7 +247,7 @@ object JsDeobfuscator {
      */
     private fun detectRotation(code: String, arrayName: String): Int? {
         val name = Regex.escape(arrayName)
-        val normalized = code.replace(Regex("\\s+"), " ")
+        val normalized = code.replace(WHITESPACE, " ")
         val shuffle = "$name\\s*\\.push\\s*\\(\\s*$name\\s*\\.shift\\s*\\(\\s*\\)\\s*\\)"
 
         val prefixed = Regex("while\\s*\\(\\s*--\\s*($IDENTIFIER)\\s*\\)\\s*\\{[^{}]*$shuffle")
@@ -273,7 +285,7 @@ object JsDeobfuscator {
      * and returns the accessor name plus the value subtracted.
      */
     private fun readDecoderOffset(code: String, arrayName: String): Pair<String, Int>? {
-        val normalized = code.replace(Regex("\\s+"), " ")
+        val normalized = code.replace(WHITESPACE, " ")
         val functionRe = Regex(
             "function\\s+($IDENTIFIER)\\s*\\(\\s*($IDENTIFIER)\\s*,\\s*($IDENTIFIER)\\s*\\)\\s*\\{"
         )
@@ -342,7 +354,7 @@ object JsDeobfuscator {
                 text = foldOpaquePredicates(text)
                 text = foldHexMath(text)
                 text = foldBracketAccess(text)
-                text = Regex("\\bdebugger\\s*;?").replace(text) { "" }
+                text = DEBUGGER_STATEMENT.replace(text) { "" }
                 if (text != before) count++
                 Segment(Kind.CODE, text)
             }
@@ -352,10 +364,10 @@ object JsDeobfuscator {
 
     private fun foldOpaquePredicates(text: String): String {
         var out = text
-        out = out.replace(Regex("!\\s*!\\s*\\[\\s*\\]"), "true")
-        out = out.replace(Regex("!\\s*\\[\\s*\\]"), "false")
-        out = out.replace(Regex("!\\s*!\\s*''"), "true")
-        out = out.replace(Regex("!\\s*''"), "false")
+        out = out.replace(NOT_NOT_EMPTY_ARRAY, "true")
+        out = out.replace(NOT_EMPTY_ARRAY, "false")
+        out = out.replace(NOT_NOT_EMPTY_STRING, "true")
+        out = out.replace(NOT_EMPTY_STRING, "false")
         return out
     }
 
@@ -401,8 +413,8 @@ object JsDeobfuscator {
                 '\n' -> out.append("\\n")
                 '\r' -> out.append("\\r")
                 '\t' -> out.append("\\t")
-                else -> if (c.toInt() < 32) {
-                    out.append(String.format("\\u%04x", c.toInt()))
+                else -> if (c.code < 32) {
+                    out.append(String.format("\\u%04x", c.code))
                 } else {
                     out.append(c)
                 }

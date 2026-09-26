@@ -47,6 +47,7 @@ class AppDetailFragment : Fragment() {
 
     private var packageInfo: PackageInfo? = null
     private var actualApkPath: String = ""
+    private var cachedAppName: String? = null
     private var isExternal: Boolean = false
 
     private var currentAnimator: Animator? = null
@@ -65,6 +66,23 @@ class AppDetailFragment : Fragment() {
     fun isExternalApk(): Boolean = isExternal
     fun hasApkPath(): Boolean = actualApkPath.isNotBlank()
     fun isZoomViewerOpen(): Boolean = _binding?.layoutIconViewerOverlay?.isVisible == true
+
+    /** True when this screen describes a package that is actually installed. */
+    fun isInstalledPackage(): Boolean {
+        val pkg = packageInfo ?: return false
+        val name = pkg.packageName ?: return false
+        if (name.isBlank()) return false
+        return try {
+            requireContext().packageManager.getApplicationInfo(name, 0)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun apkPathForImport(): String = actualApkPath
+
+    fun appNameForImport(): String = cachedAppName ?: packageInfo?.packageName.orEmpty()
 
     fun hasSignature(): Boolean {
         val pkg = packageInfo ?: return false
@@ -158,7 +176,7 @@ class AppDetailFragment : Fragment() {
             val drawable = binding.detailAppIcon.drawable
             val pkg = packageInfo
             if (drawable != null && pkg != null) {
-                val appName = pkg.applicationInfo?.loadLabel(requireContext().packageManager)?.toString()?.ifBlank { pkg.packageName } ?: pkg.packageName
+                val appName = cachedAppName ?: pkg.packageName
                 fileSaveHelper.saveIcon(drawable, appName)
                 true
             } else {
@@ -178,7 +196,7 @@ class AppDetailFragment : Fragment() {
             val drawable = binding.imageFullscreenIcon.drawable
             val pkg = packageInfo
             if (drawable != null && pkg != null) {
-                val appName = pkg.applicationInfo?.loadLabel(requireContext().packageManager)?.toString()?.ifBlank { pkg.packageName } ?: pkg.packageName
+                val appName = cachedAppName ?: pkg.packageName
                 fileSaveHelper.saveIcon(drawable, appName)
                 true
             } else {
@@ -321,7 +339,11 @@ class AppDetailFragment : Fragment() {
             binding.detailAppIcon.setImageResource(R.drawable.ic_app_placeholder)
         }
 
-        val appName = appInfo?.loadLabel(pm)?.toString()?.ifBlank { pkg.packageName } ?: pkg.packageName
+        // loadLabel makes the framework load that app's resource table, so resolve it
+        // once here and let the other call sites read the cached value.
+        val appName = appInfo?.loadLabel(pm)?.toString()?.ifBlank { pkg.packageName }
+            ?: pkg.packageName
+        cachedAppName = appName
         binding.detailAppName.text = appName
         binding.detailPackageName.text = pkg.packageName
 
@@ -383,7 +405,7 @@ class AppDetailFragment : Fragment() {
                             }
 
                             val targetName = appName.ifBlank { pkg.packageName }.ifBlank { "app" }
-                            val sanitizedAppName = targetName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                            val sanitizedAppName = targetName.replace(SanitizedNames.UNSAFE_CHARS, "_")
                             val versionName = pkg.versionName ?: "1.0"
                             val fileName = "${sanitizedAppName}_${versionName}.apk"
                             val targetFile = File(shareDir, fileName)
@@ -424,7 +446,7 @@ class AppDetailFragment : Fragment() {
 
         // APK Size & Path
         val apkFile = File(actualApkPath)
-        val sizeBytes = if (apkFile.exists()) apkFile.length() else 0L
+        val sizeBytes = apkFile.length()
         binding.textApkSize.text = AppInfoUtils.formatFileSize(sizeBytes)
         binding.layoutApkSize.setOnClickListener {
             startApkSizeAnalysis(actualApkPath)
@@ -544,7 +566,7 @@ class AppDetailFragment : Fragment() {
                 dialogBinding.textUncompressedAndFiles.text = "${getString(
                     R.string.label_apk_uncompressed_size,
                     AppInfoUtils.formatFileSize(breakdown.totalUncompressedSize)
-                )} • ${getString(R.string.label_apk_file_count, breakdown.totalFiles)}"
+                )} â€¢ ${getString(R.string.label_apk_file_count, breakdown.totalFiles)}"
 
                 val slices = breakdown.categories.map {
                     CylinderChartView.Slice(
@@ -567,7 +589,7 @@ class AppDetailFragment : Fragment() {
                     itemBinding.textCategoryPercentage.text = String.format(java.util.Locale.getDefault(), "%.1f%%", item.percentage)
                     itemBinding.progressCategory.setIndicatorColor(item.color)
                     itemBinding.progressCategory.progress = item.percentage.toInt().coerceIn(0, 100)
-                    itemBinding.textCategorySize.text = "${AppInfoUtils.formatFileSize(item.compressedSize)} • ${getString(R.string.label_apk_file_count, item.fileCount)}"
+                    itemBinding.textCategorySize.text = "${AppInfoUtils.formatFileSize(item.compressedSize)} â€¢ ${getString(R.string.label_apk_file_count, item.fileCount)}"
                     itemBinding.textCategoryUncompressed.text = getString(R.string.label_apk_original_size, AppInfoUtils.formatFileSize(item.uncompressedSize))
 
                     dialogBinding.layoutCategoriesContainer.addView(itemBinding.root)
@@ -608,14 +630,54 @@ class AppDetailFragment : Fragment() {
                 importAsProject()
                 return true
             }
+            R.id.action_uninstall -> {
+                confirmUninstall()
+                return true
+            }
         }
         return false
     }
 
-    private fun importAsProject() {
+    /** Uninstalling removes data, so it always asks first. */
+    private fun confirmUninstall() {
         val pkg = packageInfo ?: return
+        val packageName = pkg.packageName ?: return
+        if (packageName.isBlank()) return
+        val label = cachedAppName ?: packageName
+        val view = _binding?.root ?: return
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.confirm_uninstall_title, label))
+            .setMessage(R.string.confirm_uninstall_message)
+            .setPositiveButton(R.string.confirm_uninstall_positive) { _, _ -> performUninstall(packageName) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun performUninstall(packageName: String) {
+        val view = _binding?.root ?: return
+        val intent = Intent(Intent.ACTION_DELETE, Uri.parse("package:$packageName"))
+        try {
+            startActivity(intent)
+        } catch (e: Exception) {
+            // Not every device exposes the package installer, so fall back to the
+            // application details screen where uninstall lives.
+            try {
+                startActivity(
+                    Intent(
+                        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.parse("package:$packageName")
+                    )
+                )
+            } catch (e2: Exception) {
+                Snackbar.make(view, R.string.uninstall_no_launcher, Snackbar.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun importAsProject() {        val pkg = packageInfo ?: return
         if (actualApkPath.isBlank()) return
-        val appName = pkg.applicationInfo?.loadLabel(requireContext().packageManager)?.toString()?.ifBlank { pkg.packageName } ?: pkg.packageName
+        val appName = cachedAppName ?: pkg.packageName
         startActivity(ProjectWizardActivity.createIntent(requireContext(), actualApkPath, appName))
     }
 
@@ -624,7 +686,7 @@ class AppDetailFragment : Fragment() {
     ) {
         val pkg = packageInfo ?: return
         if (actualApkPath.isBlank()) return
-        val appName = pkg.applicationInfo?.loadLabel(requireContext().packageManager)?.toString()?.ifBlank { pkg.packageName } ?: pkg.packageName
+        val appName = cachedAppName ?: pkg.packageName
         startActivity(createIntent(requireContext(), actualApkPath, appName, pkg.packageName))
     }
 

@@ -146,10 +146,24 @@ class ManifestInspectorActivity : AppCompatActivity() {
         menu.findItem(R.id.action_copy_manifest)?.isEnabled = hasContent
         menu.findItem(R.id.action_copy_range)?.isEnabled = hasContent
         menu.findItem(R.id.action_select_all_manifest)?.isEnabled = hasContent
+        // Reflect the persisted state so the checkmark is correct each time the
+        // menu is opened.
+        menu.findItem(R.id.action_word_wrap)?.isChecked = AppPrefs.codeWordWrap(this)
         return super.onPrepareOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.action_word_wrap) {
+            val enabled = !item.isChecked
+            item.isChecked = enabled
+            // Persisted, so it survives leaving the screen and applies to the other
+            // code viewer too.
+            AppPrefs.get(this).edit()
+                .putBoolean(AppPrefs.KEY_CODE_WORD_WRAP, enabled)
+                .apply()
+            binding.codeEditor.setWordwrap(enabled)
+            return true
+        }
         return when (item.itemId) {
             android.R.id.home -> {
                 finish()
@@ -182,7 +196,7 @@ class ManifestInspectorActivity : AppCompatActivity() {
     private fun saveManifest() {
         val xml = manifestXml ?: return
         val targetName = appName.ifBlank { packageName }.ifBlank { "app" }
-        val sanitizedAppName = targetName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val sanitizedAppName = targetName.replace(SanitizedNames.UNSAFE_CHARS, "_")
         val fileName = "${sanitizedAppName}_AndroidManifest.xml"
         fileSaveHelper.saveText(xml, fileName, "text/xml")
     }
@@ -269,7 +283,7 @@ class ManifestInspectorActivity : AppCompatActivity() {
                     }
 
                     val targetName = appName.ifBlank { packageName }.ifBlank { "app" }
-                    val sanitizedAppName = targetName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                    val sanitizedAppName = targetName.replace(SanitizedNames.UNSAFE_CHARS, "_")
                     val targetFile = File(shareDir, "${sanitizedAppName}_AndroidManifest.xml")
                     targetFile.writeText(xml, Charsets.UTF_8)
                     FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", targetFile)

@@ -68,10 +68,6 @@
             tools:text="0x00000010  0xFF  'A'" />
     </LinearLayout>
 
-    <com.google.android.material.divider.MaterialDivider
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -140,10 +136,6 @@
                 android:textColor="?attr/colorOnSurface"
                 tools:text="Bits set: 8" />
 
-            <com.google.android.material.divider.MaterialDivider
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginVertical="12dp" />
 
             <TextView
                 android:id="@+id/text_detail_position"

@@ -25,7 +25,7 @@ class CylinderChartView @JvmOverloads constructor(
         val id: String,
         val label: String,
         val percentage: Float,
-        @ColorInt val color: Int
+        @param:ColorInt val color: Int
     )
 
     private var slices: List<Slice> = emptyList()
