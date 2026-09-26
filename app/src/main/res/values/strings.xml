@@ -629,6 +629,10 @@
     <string name="analysis_result_evidence_unavailable">Could not open this file</string>
 
     <!-- Decompile Pipeline -->
+    <string name="action_re_decompile">Re-decompile</string>
+    <string name="decompile_target_badge">Target DEX</string>
+    <string name="decompile_backend_baksmali">Baksmali</string>
+    <string name="decompile_backend_cfr">CFR</string>
     <string name="dialog_decompile_dex_title">Decompile DEX file</string>
     <string name="dialog_decompile_dex_message">Do you want to decompile %1$s?</string>
     <string name="dialog_decompile_confirm">Decompile</string>
@@ -645,7 +649,7 @@
     <string name="decompile_option_sugar">Desugar Java constructs</string>
     <string name="decompile_option_deobfuscate">Rename invalid or duplicate identifiers</string>
     <string name="decompile_start">Start Decompilation</string>
-    <string name="decompile_cancel">Cancel decompilation</string>
+    <string name="decompile_cancel">Cancel</string>
     <string name="decompile_stop">Stop</string>
     <string name="decompile_cancel_title">Cancel decompilation?</string>
     <string name="decompile_cancel_message">The current operation will stop and partial output will be discarded.</string>
@@ -663,10 +667,10 @@
     <string name="decompile_error_output">No source files were produced. Check the decompiler log for details.</string>
     <string name="decompile_running_title">Decompiling…</string>
     <string name="decompile_running_status">Processing %1$s as %2$s</string>
-    <string name="decompile_elapsed_time">Elapsed: %1$s</string>
-    <string name="decompile_logs_title">Decompiler Log</string>
-    <string name="decompile_logs_collapse">Hide log</string>
-    <string name="decompile_logs_expand">Show log</string>
+    <string name="decompile_progress_detail">%1$d / %2$d files</string>
+    <string name="decompile_progress_rate">%1$d/s • %2$s left</string>
+    <string name="decompile_option_workers">Worker threads</string>
+    <string name="decompile_option_workers_desc">Parallel decompilation workers. Higher is faster on multi-core devices but uses more memory.</string>
     <string name="decompile_completed">Decompilation Complete</string>
     <string name="decompile_failed">Decompilation Failed</string>
     <string name="decompile_view_results">Browse Decompiled Output</string>

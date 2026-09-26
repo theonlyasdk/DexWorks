@@ -1,6 +1,7 @@
 package com.asdk.tools.dexworks
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.drawable.Drawable
 import android.util.LruCache
 import android.widget.ImageView
@@ -27,11 +28,16 @@ class ProjectIconLoader(maxEntries: Int = 48) {
     // the project-open transition. Icons now pop in progressively instead.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(2))
     private val cache = LruCache<String, Drawable>(maxEntries)
-    private val inFlight = HashSet<String>()
+    private val inFlight = LinkedHashMap<String, MutableList<WeakReference<ImageView>>>()
 
-    fun load(apkPath: String?, imageView: ImageView, placeholderIconRes: Int) {
+    fun load(
+        apkPath: String?,
+        imageView: ImageView,
+        placeholderIconRes: Int,
+        placeholderTint: ColorStateList?
+    ) {
         if (apkPath.isNullOrBlank()) {
-            imageView.setImageResource(placeholderIconRes)
+            showPlaceholder(imageView, placeholderIconRes, placeholderTint)
             return
         }
         imageView.setTag(R.id.tag_app_icon_package, apkPath)
@@ -41,35 +47,58 @@ class ProjectIconLoader(maxEntries: Int = 48) {
             imageView.setImageDrawable(it)
             return
         }
-        imageView.setImageResource(placeholderIconRes)
+        showPlaceholder(imageView, placeholderIconRes, placeholderTint)
 
-        synchronized(inFlight) {
-            if (!inFlight.add(apkPath)) return
+        val viewRef = WeakReference(imageView)
+        val needsDecode = synchronized(inFlight) {
+            // Waiters are queued rather than dropped: two projects importing the
+            // same APK both need the icon, and the early return used to leave the
+            // second row showing its placeholder until an unrelated rebind.
+            val existing = inFlight[apkPath]
+            if (existing != null) {
+                if (existing.none { it.get() === imageView }) existing.add(viewRef)
+                false
+            } else {
+                inFlight[apkPath] = mutableListOf(viewRef)
+                true
+            }
         }
+        if (!needsDecode) return
 
         val appContext = imageView.context.applicationContext
-        val viewRef = WeakReference(imageView)
-
         scope.launch {
             // The existence check lives here on IO. It used to sit at the top of
             // load(), which put a file stat on the main thread for every bind.
-            if (!File(apkPath).isFile) {
-                synchronized(inFlight) { inFlight.remove(apkPath) }
-                return@launch
+            val drawable = if (File(apkPath).isFile) {
+                decode(appContext, apkPath)
+            } else {
+                null
             }
-            val drawable = decode(appContext, apkPath)
-            synchronized(inFlight) { inFlight.remove(apkPath) }
-            if (drawable != null) {
-                cache.put(apkPath, drawable)
-                imageView.post {
-                    val view = viewRef.get() ?: return@post
-                    if (view.getTag(R.id.tag_app_icon_package) == apkPath) {
+            if (drawable != null) cache.put(apkPath, drawable)
+            val waiters = synchronized(inFlight) { inFlight.remove(apkPath) }.orEmpty()
+            // A recycled row may have been rebound to another project while the
+            // decode ran, so every waiter re-checks its own tag before drawing.
+            imageView.post {
+                waiters.forEach { ref ->
+                    val view = ref.get() ?: return@forEach
+                    if (view.getTag(R.id.tag_app_icon_package) != apkPath) return@forEach
+                    if (drawable == null) {
+                        // Without this a row whose icon failed to decode, or whose
+                        // APK vanished, kept whatever drawable the recycled view
+                        // already held, so a neighbouring project's icon stuck.
+                        showPlaceholder(view, placeholderIconRes, placeholderTint)
+                    } else {
                         view.setImageTintList(null)
                         view.setImageDrawable(drawable)
                     }
                 }
             }
         }
+    }
+
+    private fun showPlaceholder(imageView: ImageView, iconRes: Int, tint: ColorStateList?) {
+        imageView.imageTintList = tint
+        imageView.setImageResource(iconRes)
     }
 
     fun clear() {

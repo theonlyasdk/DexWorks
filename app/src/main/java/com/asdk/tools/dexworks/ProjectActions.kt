@@ -167,18 +167,14 @@ object ProjectActions {
                         R.string.decompile_error_no_dex
                     )
                     dexEntries.size == 1 -> runCatching {
-                        context.startActivity(
-                            DecompileActivity.createIntent(context, apkPath, dexEntries.first(), projectName)
-                        )
+                        openDecompileOrBrowser(context, apkPath, dexEntries.first(), projectName)
                     }
                     else -> runCatching {
                         MaterialAlertDialogBuilder(context)
                             .setTitle(R.string.decompile_choose_dex_title)
                             .setItems(dexEntries.toTypedArray()) { _, which ->
                                 runCatching {
-                                    context.startActivity(
-                                        DecompileActivity.createIntent(context, apkPath, dexEntries[which], projectName)
-                                    )
+                                    openDecompileOrBrowser(context, apkPath, dexEntries[which], projectName)
                                 }
                             }
                             .setNegativeButton(R.string.dialog_decompile_cancel, null)
@@ -186,6 +182,26 @@ object ProjectActions {
                     }
                 }
             }
+        }
+    }
+
+    private fun openDecompileOrBrowser(context: Context, apkPath: String, dexEntry: String, projectName: String) {
+        val decompiledDir = DecompileActivity.getDecompiledDir(context, apkPath, dexEntry)
+        if (DecompileActivity.hasDecompiledOutput(decompiledDir)) {
+            val browserTitle = "$projectName - ${java.io.File(dexEntry).name}"
+            val intent = ApkBrowseActivity.createIntent(
+                context,
+                decompiledDir.absolutePath,
+                browserTitle
+            ).apply {
+                putExtra(ApkBrowseActivity.EXTRA_SOURCE_APK_PATH, apkPath)
+                putExtra(ApkBrowseActivity.EXTRA_SOURCE_DEX_ENTRY, dexEntry)
+            }
+            context.startActivity(intent)
+        } else {
+            context.startActivity(
+                DecompileActivity.createIntent(context, apkPath, dexEntry, projectName)
+            )
         }
     }
 

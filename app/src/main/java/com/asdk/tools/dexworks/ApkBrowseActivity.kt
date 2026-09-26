@@ -318,6 +318,8 @@ class ApkBrowseActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_APK_PATH = "extra_apk_path"
         const val EXTRA_PROJECT_NAME = "extra_project_name"
+        const val EXTRA_SOURCE_APK_PATH = "extra_source_apk_path"
+        const val EXTRA_SOURCE_DEX_ENTRY = "extra_source_dex_entry"
         private const val LOADING_SPINNER_DELAY_MS = 250L
         private const val KEY_APK_SORT = "apk_sort_type"
         private const val SCROLL_TO_TOP_MIN_ITEMS = 100
@@ -361,6 +363,8 @@ class ApkBrowseActivity : AppCompatActivity() {
     private lateinit var entryAdapter: ApkEntryAdapter
     private lateinit var fileSaveHelper: FileSaveHelper
     private var apkPath: String = ""
+    private var sourceApkPath: String = ""
+    private var sourceDexEntry: String = ""
     private var currentPath: String = ""
     private var sortMode: SortMode = SortMode.NAME
     private var foldersFirst: Boolean = true
@@ -391,10 +395,26 @@ class ApkBrowseActivity : AppCompatActivity() {
 
         apkPath = intent.getStringExtra(EXTRA_APK_PATH).orEmpty()
         val projectName = intent.getStringExtra(EXTRA_PROJECT_NAME).orEmpty()
+        sourceApkPath = intent.getStringExtra(EXTRA_SOURCE_APK_PATH).orEmpty()
+        sourceDexEntry = intent.getStringExtra(EXTRA_SOURCE_DEX_ENTRY).orEmpty()
         binding.toolbar.subtitle = projectName
         binding.toolbar.inflateMenu(R.menu.menu_apk_browse)
+        binding.toolbar.menu.findItem(R.id.action_re_decompile)?.let { item ->
+            item.isVisible = sourceApkPath.isNotBlank() && sourceDexEntry.isNotBlank()
+        }
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
+                R.id.action_re_decompile -> {
+                    startActivity(
+                        DecompileActivity.createIntent(
+                            this,
+                            apkPath = sourceApkPath,
+                            dexEntryPath = sourceDexEntry,
+                            projectName = projectName
+                        )
+                    )
+                    true
+                }
                 R.id.action_sort_name -> {
                     item.isChecked = true
                     applySort(SortMode.NAME)
@@ -443,7 +463,21 @@ class ApkBrowseActivity : AppCompatActivity() {
                 if (entry.isDirectory) {
                     openDirectory(entry.path)
                 } else if (entry.path.endsWith(".dex", ignoreCase = true) && !File(apkPath).isDirectory) {
-                    showDecompileConfirmDialog(entry)
+                    val decompiledDir = DecompileActivity.getDecompiledDir(this@ApkBrowseActivity, apkPath, entry.path)
+                    if (DecompileActivity.hasDecompiledOutput(decompiledDir)) {
+                        val browserTitle = "${binding.toolbar.subtitle?.toString().orEmpty().ifBlank { File(apkPath).nameWithoutExtension }} - ${entry.name}"
+                        val intent = createIntent(
+                            this@ApkBrowseActivity,
+                            decompiledDir.absolutePath,
+                            browserTitle
+                        ).apply {
+                            putExtra(EXTRA_SOURCE_APK_PATH, apkPath)
+                            putExtra(EXTRA_SOURCE_DEX_ENTRY, entry.path)
+                        }
+                        startActivity(intent)
+                    } else {
+                        showDecompileConfirmDialog(entry)
+                    }
                 } else {
                     showFile(entry)
                 }
@@ -706,7 +740,9 @@ class ApkBrowseActivity : AppCompatActivity() {
                     this,
                     apkPath = apkPath,
                     dexEntryPath = entry.path,
-                    projectName = binding.toolbar.title?.toString().orEmpty()
+                    projectName = binding.toolbar.subtitle?.toString().orEmpty().ifBlank {
+                        binding.toolbar.title?.toString().orEmpty()
+                    }
                 )
                 startActivity(intent)
             }

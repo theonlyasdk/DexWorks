@@ -26,7 +26,9 @@ import androidx.fragment.app.Fragment
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceManager
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.asdk.tools.dexworks.databinding.FragmentBrowseBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -436,7 +438,7 @@ class BrowseFragment : Fragment() {
             }
         }
         val currentAdapter = binding.recyclerApps.adapter as? AppAdapter
-        if (duringDrag && currentAdapter != null && currentAdapter.items === displayedApps) {
+        if (duringDrag && currentAdapter != null && currentAdapter.currentList === displayedApps) {
             currentAdapter.updateSelection(selectedPackageNames, isSelectionMode)
         } else {
             applyDisplayFilter(preserveSelection = true)
@@ -680,34 +682,31 @@ class BrowseFragment : Fragment() {
         private val onAvatarClick: (AppItem) -> Unit = {},
         private val onSaveApkToClick: (AppItem) -> Unit,
         private val iconLoader: AppIconLoader = AppIconLoader()
-    ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
+    ) : ListAdapter<AppItem, AppAdapter.ViewHolder>(DIFF) {
 
-        var items: List<AppItem> = items
-            private set
+        companion object {
+            private val DIFF = object : DiffUtil.ItemCallback<AppItem>() {
+                override fun areItemsTheSame(oldItem: AppItem, newItem: AppItem): Boolean =
+                    oldItem.packageName == newItem.packageName
+
+                override fun areContentsTheSame(oldItem: AppItem, newItem: AppItem): Boolean =
+                    oldItem == newItem
+            }
+        }
+
+        init {
+            submitList(items)
+        }
 
         private val sizeTextCache = HashMap<Long, String>()
         private var adapterContext: Context? = null
         private val systemAppBadgeText: String
             get() = adapterContext?.getString(R.string.badge_system_app).orEmpty()
 
-        /** Swaps in a new list, rebinding only the rows that actually changed. */
+        /** Swaps in a new list, diffed on a background thread. */
         fun submit(newItems: List<AppItem>) {
-            if (newItems === items) return
-            val old = items
-            items = newItems
-            applyDisplayFilterDiff(old, newItems)
-        }
-
-        private fun applyDisplayFilterDiff(old: List<AppItem>, new: List<AppItem>) {
-            val diff = object : androidx.recyclerview.widget.DiffUtil.Callback() {
-                override fun getOldListSize(): Int = old.size
-                override fun getNewListSize(): Int = new.size
-                override fun areItemsTheSame(oldPos: Int, newPos: Int): Boolean =
-                    old[oldPos].packageName == new[newPos].packageName
-                override fun areContentsTheSame(oldPos: Int, newPos: Int): Boolean =
-                    old[oldPos] == new[newPos]
-            }
-            androidx.recyclerview.widget.DiffUtil.calculateDiff(diff).dispatchUpdatesTo(this)
+            if (newItems === currentList) return
+            submitList(newItems)
         }
 
         fun updateSelection(selected: Set<String>, selectionMode: Boolean) {
@@ -719,12 +718,12 @@ class BrowseFragment : Fragment() {
             // whole list each time meant re-binding all several hundred rows per
             // touch event, so only the rows whose selected state actually flipped
             // are refreshed.
-            if (items.isEmpty()) {
+            if (currentList.isEmpty()) {
                 notifyDataSetChanged()
                 return
             }
-            val flipped = items.indices.filter { index ->
-                val pkg = items[index].packageName
+            val flipped = currentList.indices.filter { index ->
+                val pkg = currentList[index].packageName
                 (pkg in previous) != (pkg in selectedPackages) ||
                     (pkg in selectedPackages) && isSelectionMode
             }
@@ -761,7 +760,7 @@ class BrowseFragment : Fragment() {
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val item = items[position]
+            val item = getItem(position)
             val isSelected = selectedPackages.contains(item.packageName)
 
             if (item.icon != null) {
@@ -955,8 +954,6 @@ class BrowseFragment : Fragment() {
                     .start()
             }
         }
-
-        override fun getItemCount(): Int = items.size
     }
 }
 

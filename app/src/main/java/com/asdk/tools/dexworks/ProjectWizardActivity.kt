@@ -18,6 +18,7 @@ import com.asdk.tools.dexworks.databinding.ActivityProjectWizardBinding
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -44,6 +45,7 @@ class ProjectWizardActivity : AppCompatActivity() {
     private var useApkIcon: Boolean = false
     private var selectedApkUri: Uri? = null
     private var selectedApkPreviewPath: String? = null
+    private var iconPreviewJob: Job? = null
 
     private val iconPickerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -151,13 +153,26 @@ class ProjectWizardActivity : AppCompatActivity() {
                 selectedApkUri = Uri.fromFile(file)
                 selectedApkPreviewPath = initialApkPath
                 binding.textSelectedApk.text = getString(R.string.wizard_apk_selected, file.name)
-                val resolvedAppName = initialAppName ?: AppInfoUtils.getPackageArchiveInfo(applicationContext, initialApkPath, fullComponents = false)
-                    ?.applicationInfo
-                    ?.loadLabel(packageManager)
-                    ?.toString()
-                    ?.takeIf { it.isNotBlank() }
-                if (!resolvedAppName.isNullOrBlank()) {
-                    binding.editProjectName.setText(resolvedAppName)
+                // Label resolution parses the APK manifest, so it runs on IO while
+                // the wizard is already interactive instead of stalling onCreate.
+                if (!initialAppName.isNullOrBlank()) {
+                    binding.editProjectName.setText(initialAppName)
+                } else {
+                    lifecycleScope.launch {
+                        val resolvedAppName = withContext(Dispatchers.IO) {
+                            runCatching {
+                                AppInfoUtils.getPackageArchiveInfo(applicationContext, initialApkPath, fullComponents = false)
+                                    ?.applicationInfo
+                                    ?.loadLabel(packageManager)
+                                    ?.toString()
+                                    ?.takeIf { it.isNotBlank() }
+                            }.getOrNull()
+                        }
+                        if (!resolvedAppName.isNullOrBlank() && binding.editProjectName.text.isNullOrBlank()) {
+                            binding.editProjectName.setText(resolvedAppName)
+                            binding.layoutProjectName.error = null
+                        }
+                    }
                 }
                 useApkIcon = true
                 binding.checkboxUseApkIcon.isChecked = true
@@ -211,21 +226,36 @@ class ProjectWizardActivity : AppCompatActivity() {
 
     private fun updateIconPreview() {
         val image = binding.imageSelectedIcon
-        if (useApkIcon) {
-            val previewPath = selectedApkPreviewPath
-            val apkIcon = if (previewPath != null) {
-                AppInfoUtils.getPackageArchiveInfo(this, previewPath, fullComponents = false)
-                    ?.applicationInfo
-                    ?.loadIcon(packageManager)
-            } else {
-                null
+        if (!useApkIcon) {
+            showCatalogIcon(image)
+            return
+        }
+        val previewPath = selectedApkPreviewPath
+        if (previewPath.isNullOrBlank()) {
+            showCatalogIcon(image)
+            return
+        }
+        // Icon resolution parses the APK manifest plus its resource table, so it
+        // runs on IO. The catalog icon stands in until the real one arrives; a
+        // stale load never overwrites a newer selection.
+        showCatalogIcon(image)
+        iconPreviewJob?.cancel()
+        iconPreviewJob = lifecycleScope.launch {
+            val apkIcon = withContext(Dispatchers.IO) {
+                runCatching {
+                    AppInfoUtils.getPackageArchiveInfo(applicationContext, previewPath, fullComponents = false)
+                        ?.applicationInfo
+                        ?.loadIcon(packageManager)
+                }.getOrNull()
             }
-            if (apkIcon != null) {
+            if (apkIcon != null && selectedApkPreviewPath == previewPath) {
                 image.imageTintList = null
                 image.setImageDrawable(apkIcon)
-                return
             }
         }
+    }
+
+    private fun showCatalogIcon(image: android.widget.ImageView) {
         image.imageTintList = ColorStateList.valueOf(
             MaterialColors.getColor(image, androidx.appcompat.R.attr.colorPrimary)
         )

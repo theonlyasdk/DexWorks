@@ -31,81 +31,79 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:paddingHorizontal="20dp"
+                android:paddingTop="12dp"
+                android:paddingBottom="24dp">
 
-                <!-- Format Selection Card -->
-                <com.google.android.material.card.MaterialCardView
+                <!-- Large Important Text: Target DEX Header -->
+                <TextView
+                    android:id="@+id/text_target_dex"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="0dp"
-                    app:strokeWidth="0dp">
+                    android:textAppearance="?attr/textAppearanceHeadlineMedium"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textStyle="bold"
+                    tools:text="classes.dex" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="20dp">
+                <TextView
+                    android:id="@+id/text_target_project"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="28dp"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    tools:text="DexWorks" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/decompile_format_title"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
-                            android:textColor="?attr/colorOnSurface" />
+                <!-- Format Selection -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/decompile_format_title"
+                    android:textAppearance="?attr/textAppearanceTitleSmall"
+                    android:textColor="?attr/colorOnSurface" />
 
-                        <RadioGroup
-                            android:id="@+id/group_format"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp">
-
-                            <com.google.android.material.radiobutton.MaterialRadioButton
-                                android:id="@+id/radio_smali"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:checked="true"
-                                android:text="@string/decompile_format_smali"
-                                android:textAppearance="?attr/textAppearanceBodyLarge"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="32dp"
-                                android:layout_marginBottom="12dp"
-                                android:text="@string/decompile_format_smali_desc"
-                                android:textAppearance="?attr/textAppearanceBodySmall"
-                                android:textColor="?attr/colorOnSurfaceVariant" />
-
-                            <com.google.android.material.radiobutton.MaterialRadioButton
-                                android:id="@+id/radio_java"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/decompile_format_java"
-                                android:textAppearance="?attr/textAppearanceBodyLarge"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="32dp"
-                                android:text="@string/decompile_format_java_desc"
-                                android:textAppearance="?attr/textAppearanceBodySmall"
-                                android:textColor="?attr/colorOnSurfaceVariant" />
-
-                        </RadioGroup>
-
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <!-- Advanced Options Card -->
-                <com.google.android.material.card.MaterialCardView
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/group_format"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="24dp"
+                    app:checkedButton="@id/btn_format_java"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_format_java"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/decompile_format_java" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_format_smali"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/decompile_format_smali" />
+
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                <!-- Advanced Options -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/decompile_advanced_title"
+                    android:textAppearance="?attr/textAppearanceTitleSmall"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="32dp"
                     app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp"
@@ -115,46 +113,70 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="20dp">
+                        android:padding="12dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/decompile_advanced_title"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
+                            android:text="@string/decompile_option_workers"
+                            android:textAppearance="?attr/textAppearanceTitleSmall"
                             android:textColor="?attr/colorOnSurface" />
 
-                        <!-- Smali Advanced Options -->
-                        <LinearLayout
-                            android:id="@+id/layout_smali_options"
-                            android:layout_width="match_parent"
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/decompile_option_workers_desc"
+                            android:textAppearance="?attr/textAppearanceBodySmall"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+
+                        <com.google.android.material.button.MaterialButtonToggleGroup
+                            android:id="@+id/group_workers"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:orientation="vertical"
-                            android:visibility="visible">
+                            android:layout_marginBottom="12dp"
+                            app:checkedButton="@id/btn_workers_2"
+                            app:selectionRequired="true"
+                            app:singleSelection="true">
 
-                            <com.google.android.material.checkbox.MaterialCheckBox
-                                android:id="@+id/check_reg_info"
-                                android:layout_width="match_parent"
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_workers_1"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/decompile_option_reg_info" />
+                                android:text="1" />
 
-                            <com.google.android.material.checkbox.MaterialCheckBox
-                                android:id="@+id/check_locals"
-                                android:layout_width="match_parent"
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_workers_2"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/decompile_option_locals" />
+                                android:text="2" />
 
-                        </LinearLayout>
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_workers_4"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="4" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_workers_8"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="8" />
+
+                        </com.google.android.material.button.MaterialButtonToggleGroup>
 
                         <!-- Java (CFR) Advanced Options -->
                         <LinearLayout
                             android:id="@+id/layout_java_options"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
                             android:orientation="vertical"
-                            android:visibility="gone">
+                            android:visibility="visible">
 
                             <com.google.android.material.checkbox.MaterialCheckBox
                                 android:id="@+id/check_sugar"
@@ -168,6 +190,28 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:text="@string/decompile_option_deobfuscate" />
+
+                        </LinearLayout>
+
+                        <!-- Smali Advanced Options -->
+                        <LinearLayout
+                            android:id="@+id/layout_smali_options"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:visibility="gone">
+
+                            <com.google.android.material.checkbox.MaterialCheckBox
+                                android:id="@+id/check_reg_info"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/decompile_option_reg_info" />
+
+                            <com.google.android.material.checkbox.MaterialCheckBox
+                                android:id="@+id/check_locals"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/decompile_option_locals" />
 
                         </LinearLayout>
 
@@ -192,133 +236,92 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:padding="16dp"
+            android:padding="24dp"
             android:visibility="gone">
 
-            <!-- Progress & Status Card -->
-            <com.google.android.material.card.MaterialCardView
+            <TextView
+                android:id="@+id/text_running_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                android:text="@string/decompile_running_title"
+                android:textAppearance="?attr/textAppearanceHeadlineSmall"
+                android:textColor="?attr/colorOnSurface" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
+            <TextView
+                android:id="@+id/text_running_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                tools:text="classes.dex -> Smali" />
 
-                    <TextView
-                        android:id="@+id/text_running_title"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/decompile_running_title"
-                        android:textAppearance="?attr/textAppearanceTitleLarge"
-                        android:textColor="?attr/colorOnSurface"
-                        android:textStyle="bold" />
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/progress_decompile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:indeterminate="true"
+                app:indicatorColor="?attr/colorPrimary"
+                app:trackColor="?attr/colorSurfaceContainerHighest"
+                app:trackThickness="8dp"
+                app:trackCornerRadius="4dp" />
 
-                    <TextView
-                        android:id="@+id/text_running_subtitle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textAppearance="?attr/textAppearanceBodyMedium"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        tools:text="classes.dex -> Smali" />
+            <TextView
+                android:id="@+id/text_progress_detail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textAppearance="?attr/textAppearanceTitleLarge"
+                android:textColor="?attr/colorOnSurface"
+                android:visibility="gone"
+                tools:text="1,234 / 3,456 files" />
 
-                    <com.google.android.material.progressindicator.LinearProgressIndicator
-                        android:id="@+id/progress_decompile"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:indeterminate="true"
-                        app:indicatorColor="?attr/colorPrimary"
-                        app:trackCornerRadius="4dp" />
+            <TextView
+                android:id="@+id/text_progress_rate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                tools:text="89/s • 00:21 left" />
 
-                    <TextView
-                        android:id="@+id/text_elapsed_time"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:text="Elapsed: 00:00"
-                        android:textAppearance="?attr/textAppearanceLabelLarge"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_cancel_decompile"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/decompile_cancel" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_cancel_decompile"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/decompile_cancel" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_view_output"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/decompile_view_results"
+                android:visibility="gone" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_view_output"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="@string/decompile_view_results"
-                        android:visibility="gone" />
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Collapsible Log Panel -->
-            <com.google.android.material.card.MaterialCardView
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/scroll_logs"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                android:layout_marginTop="24dp"
+                android:clipToPadding="false">
 
-                <LinearLayout
+                <TextView
+                    android:id="@+id/text_logs"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:layout_height="wrap_content"
+                    android:fontFamily="monospace"
+                    android:textIsSelectable="true"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    tools:text="Disassembling DEX file..." />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="@string/decompile_logs_title"
-                            android:textAppearance="?attr/textAppearanceTitleSmall"
-                            android:textColor="?attr/colorOnSurface" />
-
-                    </LinearLayout>
-
-                    <androidx.core.widget.NestedScrollView
-                        android:id="@+id/scroll_logs"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:layout_marginTop="8dp"
-                        android:background="?attr/colorSurfaceContainerHigh"
-                        android:padding="12dp">
-
-                        <TextView
-                            android:id="@+id/text_logs"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="monospace"
-                            android:textIsSelectable="true"
-                            android:textAppearance="?attr/textAppearanceBodySmall"
-                            android:textColor="?attr/colorOnSurface"
-                            tools:text="Disassembling DEX file..." />
-
-                    </androidx.core.widget.NestedScrollView>
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </androidx.core.widget.NestedScrollView>
 
         </LinearLayout>
 

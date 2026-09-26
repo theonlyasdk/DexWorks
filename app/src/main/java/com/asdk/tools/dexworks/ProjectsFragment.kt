@@ -40,11 +40,26 @@ private fun resolveApkFor(project: ProjectItem): String? {
         ?: project.path.takeIf { File(it).isFile && it.endsWith(".apk", ignoreCase = true) }
 }
 
-/** A project row with its APK path already resolved on a background thread. */
+/** A project row with its APK path and date text already resolved on a background thread. */
 private data class ProjectRow(
     val item: ProjectItem,
-    val apkPath: String?
+    val apkPath: String?,
+    val dateText: String
 )
+
+/** Relative-time text, formatted on IO during load so binding does no work. */
+private fun formatProjectDate(project: ProjectItem): String {
+    return if (project.lastModified > 0) {
+        DateUtils.getRelativeTimeSpanString(
+            project.lastModified,
+            System.currentTimeMillis(),
+            DateUtils.MINUTE_IN_MILLIS,
+            DateUtils.FORMAT_ABBREV_RELATIVE
+        ).toString()
+    } else {
+        AppInfoUtils.formatDate(project.lastModified)
+    }
+}
 
 class ProjectsFragment : Fragment() {
 
@@ -104,11 +119,13 @@ class ProjectsFragment : Fragment() {
     private var loadJob: Job? = null
 
     private fun loadProjects() {
-        // Nothing here may touch the disk or diff on the main thread. The cached
-        // list stays on screen while IO re-reads and re-resolves in the
-        // background; ListAdapter then diffs off the main thread as well. The
-        // spinner only shows on a true cold load when there is nothing to show.
-        if (ProjectStore.getCachedProjects() == null) {
+        // Nothing here may touch the disk or diff on the main thread. IO re-reads
+        // and re-resolves in the background while any already-rendered list stays
+        // on screen, and ListAdapter diffs off the main thread too. The spinner is
+        // only for the case where there is nothing to show yet, since flashing it
+        // over a populated list is what read as jank.
+        val hasContent = projectAdapter.itemCount > 0
+        if (!hasContent) {
             showLoading()
         }
 
@@ -118,7 +135,9 @@ class ProjectsFragment : Fragment() {
             val rows = withContext(Dispatchers.IO) {
                 ProjectStore.loadProjects(appContext)
                     .sortedByDescending { it.lastModified }
-                    .map { project -> ProjectRow(project, resolveApkFor(project)) }
+                    .map { project ->
+                        ProjectRow(project, resolveApkFor(project), formatProjectDate(project))
+                    }
             }
             if (_binding == null) return@launch
             if (rows.isEmpty()) {
@@ -293,7 +312,6 @@ class ProjectsFragment : Fragment() {
         class ViewHolder(val binding: ItemProjectBinding) : RecyclerView.ViewHolder(binding.root)
 
         private var iconTint: ColorStateList? = null
-        private val dateTextCache = HashMap<String, String>()
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             val binding = ItemProjectBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -318,7 +336,8 @@ class ProjectsFragment : Fragment() {
                 iconLoader.load(
                     row.apkPath,
                     holder.binding.imgProjectIcon,
-                    ProjectIconCatalog.iconRes(item.iconKey)
+                    ProjectIconCatalog.iconRes(item.iconKey),
+                    iconTint
                 )
             } else {
                 holder.binding.imgProjectIcon.imageTintList = iconTint
@@ -327,21 +346,7 @@ class ProjectsFragment : Fragment() {
                 )
             }
 
-            // Relative time formatting is locale aware and was re-running on every
-            // bind; the value only changes when the list is reloaded.
-            val formattedDate = dateTextCache.getOrPut(item.path) {
-                if (item.lastModified > 0) {
-                    DateUtils.getRelativeTimeSpanString(
-                        item.lastModified,
-                        System.currentTimeMillis(),
-                        DateUtils.MINUTE_IN_MILLIS,
-                        DateUtils.FORMAT_ABBREV_RELATIVE
-                    ).toString()
-                } else {
-                    AppInfoUtils.formatDate(item.lastModified)
-                }
-            }
-            holder.binding.textProjectDate.text = formattedDate
+            holder.binding.textProjectDate.text = row.dateText
 
             holder.itemView.setOnClickListener {
                 onItemClick(item)

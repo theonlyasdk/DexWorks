@@ -17,8 +17,6 @@ import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
@@ -37,7 +35,7 @@ class DecompileActivity : AppCompatActivity() {
             context: Context,
             apkPath: String,
             dexEntryPath: String,
-            projectName: String,
+            projectName: String = "",
             deleteApkAfterDecompile: Boolean = false
         ): Intent {
             return Intent(context, DecompileActivity::class.java).apply {
@@ -47,15 +45,32 @@ class DecompileActivity : AppCompatActivity() {
                 putExtra(EXTRA_DELETE_APK_AFTER_DECOMPILE, deleteApkAfterDecompile)
             }
         }
+
+        fun getDecompiledDir(context: Context, apkPath: String, dexEntryPath: String): File {
+            val project = ProjectStore.findByApkPath(context, apkPath)
+            val dexName = File(dexEntryPath).nameWithoutExtension.ifBlank { "dex" }
+            return if (project != null && File(project.path).isDirectory) {
+                File(project.path, "decompiled/$dexName")
+            } else {
+                val cleanApk = File(apkPath).nameWithoutExtension.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
+                File(baseDir, "decompiled/${cleanApk}_$dexName")
+            }
+        }
+
+        fun hasDecompiledOutput(dir: File): Boolean {
+            if (!dir.isDirectory) return false
+            return dir.walkTopDown().any { it.isFile && (it.extension == "java" || it.extension == "smali") }
+        }
     }
 
     private lateinit var binding: ActivityDecompileBinding
     private var apkPath: String = ""
     private var dexEntryPath: String = ""
     private var projectName: String = ""
-    private var timerJob: Job? = null
     private var decompileJob: Job? = null
     private var deleteApkAfterDecompile = false
+    private var progressStartMs: Long = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,10 +100,15 @@ class DecompileActivity : AppCompatActivity() {
     }
 
     private fun setupOptions() {
-        binding.groupFormat.setOnCheckedChangeListener { _, checkedId ->
-            val isSmali = checkedId == R.id.radio_smali
-            binding.layoutSmaliOptions.isVisible = isSmali
-            binding.layoutJavaOptions.isVisible = !isSmali
+        binding.textTargetDex.text = File(dexEntryPath).name.ifBlank { dexEntryPath }
+        binding.textTargetProject.text = projectName.ifBlank { File(apkPath).nameWithoutExtension }
+
+        binding.groupFormat.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                val isSmali = checkedId == R.id.btn_format_smali
+                binding.layoutSmaliOptions.isVisible = isSmali
+                binding.layoutJavaOptions.isVisible = !isSmali
+            }
         }
 
         binding.btnStartDecompile.setOnClickListener {
@@ -115,10 +135,14 @@ class DecompileActivity : AppCompatActivity() {
         binding.scrollSetup.isVisible = false
         binding.layoutRunning.isVisible = true
         binding.progressDecompile.isVisible = true
+        binding.progressDecompile.isIndeterminate = true
+        binding.textProgressDetail.isVisible = false
+        binding.textProgressRate.isVisible = false
+        progressStartMs = 0L
         binding.btnCancelDecompile.isVisible = true
         binding.btnViewOutput.isVisible = false
 
-        val isSmali = binding.radioSmali.isChecked
+        val isSmali = binding.groupFormat.checkedButtonId == R.id.btn_format_smali
         val formatName = if (isSmali) getString(R.string.decompile_format_smali) else getString(R.string.decompile_format_java)
         binding.textRunningSubtitle.text = getString(
             R.string.decompile_running_status,
@@ -126,11 +150,9 @@ class DecompileActivity : AppCompatActivity() {
             formatName
         )
 
-        val cleanProjectName = projectName.ifBlank { "decompiled" }.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-        val cleanDexName = File(dexEntryPath).nameWithoutExtension
-        val dirName = "${cleanProjectName}_${cleanDexName}_${if (isSmali) "smali" else "java"}_${System.currentTimeMillis()}"
-        val baseDir = getExternalFilesDir(null) ?: filesDir
-        val outputDir = File(baseDir, "decompiled/$dirName")
+        val outputDir = getDecompiledDir(this, apkPath, dexEntryPath)
+        outputDir.deleteRecursively()
+        outputDir.mkdirs()
 
         val config = DecompilerEngine.DecompileConfig(
             apkFile = File(apkPath),
@@ -141,11 +163,9 @@ class DecompileActivity : AppCompatActivity() {
             smaliLocals = binding.checkLocals.isChecked,
             javaSugar = binding.checkSugar.isChecked,
             javaDeobfuscate = binding.checkDeobfuscate.isChecked,
-            deleteApkAfterDecompile = deleteApkAfterDecompile
+            deleteApkAfterDecompile = deleteApkAfterDecompile,
+            workerCount = selectedWorkers()
         )
-
-        val startTime = SystemClock.elapsedRealtime()
-        startTimer(startTime)
 
         binding.textLogs.text = ""
         appendLog("Preparing to decompile $dexEntryPath into ${outputDir.absolutePath}...")
@@ -154,15 +174,22 @@ class DecompileActivity : AppCompatActivity() {
             try {
                 val success = withContext(Dispatchers.IO) {
                     runInterruptible {
-                        DecompilerEngine.decompile(config) { logLine ->
-                            runOnUiThread {
-                                if (!isFinishing && !isDestroyed) appendLog(logLine)
+                        DecompilerEngine.decompile(
+                            config,
+                            onLog = { logLine ->
+                                runOnUiThread {
+                                    if (!isFinishing && !isDestroyed) appendLog(logLine)
+                                }
+                            },
+                            onProgress = { done, total ->
+                                runOnUiThread {
+                                    if (!isFinishing && !isDestroyed) updateDecompileProgress(done, total)
+                                }
                             }
-                        }
+                        )
                     }
                 }
 
-                stopTimer()
                 binding.progressDecompile.isVisible = false
                 binding.btnCancelDecompile.isVisible = false
 
@@ -184,14 +211,12 @@ class DecompileActivity : AppCompatActivity() {
                     appendLog(getString(R.string.decompile_error_output))
                 }
             } catch (cancelled: CancellationException) {
-                stopTimer()
                 binding.progressDecompile.isVisible = false
                 binding.btnCancelDecompile.isVisible = false
                 binding.textRunningTitle.setText(R.string.decompile_cancelled_title)
                 appendLog(getString(R.string.decompile_cancelled))
                 throw cancelled
             } catch (e: Exception) {
-                stopTimer()
                 binding.progressDecompile.isVisible = false
                 binding.btnCancelDecompile.isVisible = false
                 binding.textRunningTitle.setText(R.string.decompile_failed)
@@ -200,10 +225,51 @@ class DecompileActivity : AppCompatActivity() {
         }
     }
 
+    private fun selectedWorkers(): Int {
+        return when (binding.groupWorkers.checkedButtonId) {
+            R.id.btn_workers_1 -> 1
+            R.id.btn_workers_4 -> 4
+            R.id.btn_workers_8 -> 8
+            else -> 2
+        }
+    }
+
     private fun openBrowser(directory: File) {
-        val browserTitle = "$projectName - ${if (binding.radioSmali.isChecked) "Smali" else "Java"}"
-        val intent = ApkBrowseActivity.createIntent(this, directory.absolutePath, browserTitle)
+        val browserTitle = "$projectName - ${File(dexEntryPath).name}"
+        val intent = ApkBrowseActivity.createIntent(this, directory.absolutePath, browserTitle).apply {
+            putExtra(ApkBrowseActivity.EXTRA_SOURCE_APK_PATH, apkPath)
+            putExtra(ApkBrowseActivity.EXTRA_SOURCE_DEX_ENTRY, dexEntryPath)
+            putExtra(ApkBrowseActivity.EXTRA_PROJECT_NAME, projectName)
+        }
         startActivity(intent)
+    }
+
+    private fun updateDecompileProgress(done: Int, total: Int) {
+        if (total <= 0) {
+            binding.progressDecompile.isIndeterminate = true
+            binding.textProgressDetail.isVisible = false
+            binding.textProgressRate.isVisible = false
+            return
+        }
+        if (progressStartMs == 0L) progressStartMs = SystemClock.elapsedRealtime()
+        binding.progressDecompile.isIndeterminate = false
+        binding.progressDecompile.max = total
+        binding.progressDecompile.setProgressCompat(done.coerceIn(0, total), true)
+        val elapsedSec = (SystemClock.elapsedRealtime() - progressStartMs) / 1000.0
+        binding.textProgressDetail.isVisible = true
+        binding.textProgressDetail.text = getString(R.string.decompile_progress_detail, done, total)
+        if (done <= 0 || elapsedSec < 1.0) {
+            binding.textProgressRate.isVisible = false
+        } else {
+            val rate = (done / elapsedSec).toInt().coerceAtLeast(1)
+            val etaSec = (total - done).coerceAtLeast(0) / rate
+            binding.textProgressRate.isVisible = true
+            binding.textProgressRate.text = getString(
+                R.string.decompile_progress_rate,
+                rate,
+                String.format(Locale.US, "%02d:%02d", etaSec / 60, etaSec % 60)
+            )
+        }
     }
 
     private fun appendLog(line: String) {
@@ -217,28 +283,8 @@ class DecompileActivity : AppCompatActivity() {
         }
     }
 
-    private fun startTimer(startTime: Long) {
-        timerJob?.cancel()
-        timerJob = lifecycleScope.launch {
-            while (isActive) {
-                val elapsedSeconds = (SystemClock.elapsedRealtime() - startTime) / 1000
-                val minutes = elapsedSeconds / 60
-                val seconds = elapsedSeconds % 60
-                val formatted = String.format(Locale.US, "%02d:%02d", minutes, seconds)
-                binding.textElapsedTime.text = getString(R.string.decompile_elapsed_time, formatted)
-                delay(1000)
-            }
-        }
-    }
-
-    private fun stopTimer() {
-        timerJob?.cancel()
-        timerJob = null
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         if (decompileJob?.isActive == true) decompileJob?.cancel()
-        stopTimer()
     }
 }

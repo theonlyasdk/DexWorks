@@ -2,6 +2,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/action_re_decompile"
+        android:title="@string/action_re_decompile"
+        android:visible="false"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_sort_group"
         android:title="@string/apk_browse_sort"
         app:showAsAction="never">

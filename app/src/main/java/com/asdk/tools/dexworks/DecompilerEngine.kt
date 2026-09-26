@@ -13,13 +13,13 @@ import org.jf.baksmali.BaksmaliOptions
 import org.jf.dexlib2.DexFileFactory
 import org.jf.dexlib2.Opcodes
 import org.objectweb.asm.MethodVisitor
-import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
-import java.util.zip.ZipOutputStream
 
 object DecompilerEngine {
 
@@ -37,12 +37,18 @@ object DecompilerEngine {
         val smaliLocals: Boolean = false,
         val javaSugar: Boolean = true,
         val javaDeobfuscate: Boolean = false,
-        val deleteApkAfterDecompile: Boolean = false
+        val deleteApkAfterDecompile: Boolean = false,
+        val workerCount: Int = 2
     )
 
+    /**
+     * @param onProgress invoked with (done, total) file counts. Called on background
+     * threads; total <= 0 means the total is not known yet (conversion phase).
+     */
     fun decompile(
         config: DecompileConfig,
-        onLog: (String) -> Unit
+        onLog: (String) -> Unit,
+        onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }
     ): Boolean {
         if (!config.apkFile.isFile) {
             onLog("Error: APK file is missing.")
@@ -74,8 +80,8 @@ object DecompilerEngine {
             }
 
             return when (config.format) {
-                Format.SMALI -> decompileSmali(config, tempDexFile, onLog)
-                Format.JAVA -> decompileJava(config, tempDexFile, onLog)
+                Format.SMALI -> decompileSmali(config, tempDexFile, onLog, onProgress)
+                Format.JAVA -> decompileJava(config, tempDexFile, onLog, onProgress)
             }
         } catch (cancelled: CancellationException) {
             onLog("Decompilation cancelled.")
@@ -101,10 +107,61 @@ object DecompilerEngine {
         }
     }
 
+    /**
+     * Counts finished output files on a daemon thread while a blocking engine
+     * call runs. Used where the engine reports no per-file progress (baksmali).
+     * The caller must stop it in a finally block; it emits one last count on stop.
+     */
+    private class OutputPoller(
+        private val outputDir: File,
+        private val extension: String,
+        private val total: Int,
+        private val onProgress: (Int, Int) -> Unit
+    ) {
+        @Volatile
+        private var running = true
+        private val thread = Thread({
+            while (running) {
+                emit()
+                try {
+                    Thread.sleep(400)
+                } catch (_: InterruptedException) {
+                    break
+                }
+            }
+        }, "decompile-progress").apply { isDaemon = true }
+
+        fun start() {
+            onProgress(0, total.coerceAtLeast(0))
+            thread.start()
+        }
+
+        fun stop() {
+            running = false
+            thread.interrupt()
+            try {
+                thread.join(2000)
+            } catch (_: InterruptedException) {
+            }
+            emit()
+        }
+
+        private fun emit() {
+            if (total <= 0) return
+            val done = try {
+                outputDir.walkTopDown().count { it.isFile && it.extension == extension }
+            } catch (_: Exception) {
+                return
+            }
+            onProgress(done.coerceIn(0, total), total)
+        }
+    }
+
     private fun decompileSmali(
         config: DecompileConfig,
         dexFile: File,
-        onLog: (String) -> Unit
+        onLog: (String) -> Unit,
+        onProgress: (Int, Int) -> Unit
     ): Boolean {
         onLog("Initializing baksmali disassembler...")
         val dex = DexFileFactory.loadDexFile(dexFile, Opcodes.getDefault())
@@ -114,20 +171,28 @@ object DecompilerEngine {
                 registerInfo = BaksmaliOptions.ALL
             }
         }
-        val jobs = Runtime.getRuntime().availableProcessors().coerceIn(1, 4)
+        val jobs = config.workerCount.coerceIn(1, 8)
         onLog("Disassembling classes to smali using $jobs workers...")
-        checkInterrupted()
-        val success = Baksmali.disassembleDexFile(dex, config.outputDir, jobs, options)
-        checkInterrupted()
-        val fileCount = config.outputDir.walkTopDown().count { it.isFile && it.extension == "smali" }
-        onLog(if (success) "Disassembly finished: $fileCount Smali files." else "Baksmali completed with errors.")
-        return success && fileCount > 0
+        // Baksmali reports no per-class progress, so observe its output directory.
+        val poller = OutputPoller(config.outputDir, "smali", dex.classes.size, onProgress)
+        poller.start()
+        try {
+            checkInterrupted()
+            val success = Baksmali.disassembleDexFile(dex, config.outputDir, jobs, options)
+            checkInterrupted()
+            val fileCount = config.outputDir.walkTopDown().count { it.isFile && it.extension == "smali" }
+            onLog(if (success) "Disassembly finished: $fileCount Smali files." else "Baksmali completed with errors.")
+            return success && fileCount > 0
+        } finally {
+            poller.stop()
+        }
     }
 
     private fun decompileJava(
         config: DecompileConfig,
         dexFile: File,
-        onLog: (String) -> Unit
+        onLog: (String) -> Unit,
+        onProgress: (Int, Int) -> Unit
     ): Boolean {
         onLog("Initializing CFR Java decompiler...")
         val options = mutableMapOf<String, String>()
@@ -146,7 +211,6 @@ object DecompilerEngine {
         }
 
         val classDirectory = File(config.outputDir.parentFile, "classes_${System.currentTimeMillis()}")
-        val intermediateJar = File(config.outputDir.parentFile, "classes_${System.currentTimeMillis()}.jar")
         val translationErrors = AtomicInteger()
         try {
             classDirectory.mkdirs()
@@ -178,27 +242,32 @@ object DecompilerEngine {
                 onLog("Error: DEX conversion produced no JVM classes.")
                 return false
             }
-            onLog("Converted ${classFiles.size} classes; packaging for CFR...")
-            writeJar(classDirectory, classFiles, intermediateJar)
+            onLog("Converted ${classFiles.size} classes.")
             checkInterrupted()
 
-            return decompileClasses(config, intermediateJar, translationErrors.get(), onLog)
+            // CFR folds inner classes into their outer file, so only top-level
+            // classes produce output. Failed classes produce nothing, so the bar
+            // can stall below full and the caller snaps it on completion.
+            val totalJavaFiles = classFiles.count { !it.nameWithoutExtension.contains('$') }
+            return decompileClasses(config, classFiles, translationErrors.get(), totalJavaFiles, onLog, onProgress)
         } finally {
             classDirectory.deleteRecursively()
-            intermediateJar.delete()
         }
     }
 
     private fun decompileClasses(
         config: DecompileConfig,
-        classJar: File,
+        classFiles: List<File>,
         translationErrorCount: Int,
-        onLog: (String) -> Unit
+        totalJavaFiles: Int,
+        onLog: (String) -> Unit,
+        onProgress: (Int, Int) -> Unit
     ): Boolean {
         val options = mutableMapOf(
             "outputdir" to config.outputDir.absolutePath,
             "silent" to "true"
         )
+        val completed = AtomicInteger(0)
 
         val sinkFactory = object : OutputSinkFactory {
             override fun getSupportedSinks(
@@ -225,6 +294,9 @@ object DecompilerEngine {
                         dir.mkdirs()
                         val targetFile = File(dir, "${decompiled.className}.java")
                         targetFile.writeText(decompiled.java)
+                        if (totalJavaFiles > 0) {
+                            onProgress(completed.incrementAndGet().coerceIn(0, totalJavaFiles), totalJavaFiles)
+                        }
                         val displayPkg = if (decompiled.packageName.isBlank()) "" else "${decompiled.packageName}."
                         onLog("Decompiled $displayPkg${decompiled.className}.java")
                     } as OutputSinkFactory.Sink<T>
@@ -240,14 +312,16 @@ object DecompilerEngine {
             }
         }
 
-        val driver = CfrDriver.Builder()
-            .withOptions(options)
-            .withOutputSink(sinkFactory)
-            .build()
-
-        onLog("Decompiling JVM classes to Java...")
+        val workers = config.workerCount.coerceIn(1, 8)
+        val shards = shardByOuterClass(classFiles, workers)
+        onLog("Decompiling ${classFiles.size} JVM classes to Java using ${shards.size} worker(s)...")
+        if (totalJavaFiles > 0) onProgress(0, totalJavaFiles)
         checkInterrupted()
-        driver.analyse(listOf(classJar.absolutePath))
+        if (shards.size == 1) {
+            analyseShard(shards.first(), options, sinkFactory)
+        } else {
+            analyseParallel(shards, options, sinkFactory)
+        }
         checkInterrupted()
         val fileCount = config.outputDir.walkTopDown().count { it.isFile && it.extension == "java" }
         onLog("CFR produced $fileCount Java files${if (translationErrorCount > 0) " with $translationErrorCount conversion warnings" else ""}.")
@@ -255,15 +329,63 @@ object DecompilerEngine {
         return fileCount > 0
     }
 
-    private fun writeJar(classDirectory: File, classFiles: List<File>, outputJar: File) {
-        ZipOutputStream(BufferedOutputStream(FileOutputStream(outputJar))).use { output ->
-            classFiles.forEach { classFile ->
-                checkInterrupted()
-                val entryName = classFile.relativeTo(classDirectory).invariantSeparatorsPath
-                output.putNextEntry(ZipEntry(entryName))
-                classFile.inputStream().use { input -> copyInterruptibly(input, output) }
-                output.closeEntry()
+    /**
+     * Splits classes into balanced shards, keeping each inner class with its
+     * outer class so every shard stays self-contained for CFR.
+     */
+    private fun shardByOuterClass(classFiles: List<File>, shards: Int): List<List<String>> {
+        val groups = classFiles.groupBy { it.nameWithoutExtension.substringBefore('$') }
+        val buckets = List(shards) { mutableListOf<String>() }
+        val sizes = IntArray(shards)
+        groups.entries.sortedByDescending { it.value.size }.forEach { (_, files) ->
+            var best = 0
+            for (i in 1 until shards) {
+                if (sizes[i] < sizes[best]) best = i
             }
+            files.forEach { buckets[best].add(it.absolutePath) }
+            sizes[best] += files.size
+        }
+        return buckets.filter { it.isNotEmpty() }
+    }
+
+    private fun analyseShard(
+        targets: List<String>,
+        options: Map<String, String>,
+        sinkFactory: OutputSinkFactory
+    ) {
+        val driver = CfrDriver.Builder()
+            .withOptions(options)
+            .withOutputSink(sinkFactory)
+            .build()
+        driver.analyse(targets)
+    }
+
+    /**
+     * One CFR driver per shard. Drivers are independent and only share the sink,
+     * which writes distinct files and counts through an atomic integer.
+     */
+    private fun analyseParallel(
+        shards: List<List<String>>,
+        options: Map<String, String>,
+        sinkFactory: OutputSinkFactory
+    ) {
+        val executor = Executors.newFixedThreadPool(shards.size)
+        try {
+            val futures = shards.map { shard ->
+                executor.submit(Callable {
+                    analyseShard(shard, options, sinkFactory)
+                })
+            }
+            try {
+                futures.forEach { it.get() }
+            } catch (e: InterruptedException) {
+                futures.forEach { it.cancel(true) }
+                throw CancellationException("Decompilation cancelled.", e)
+            } catch (e: ExecutionException) {
+                throw e.cause ?: e
+            }
+        } finally {
+            executor.shutdownNow()
         }
     }
 
