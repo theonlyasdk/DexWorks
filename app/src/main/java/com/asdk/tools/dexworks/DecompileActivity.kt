@@ -76,12 +76,7 @@ class DecompileActivity : AppCompatActivity() {
         binding = ActivityDecompileBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-        ViewCompat.requestApplyInsets(binding.root)
+        enableEdgeToEdgeWithPadding(binding.root)
 
         apkPath = intent.getStringExtra(EXTRA_APK_PATH).orEmpty()
         dexEntryPath = intent.getStringExtra(EXTRA_DEX_ENTRY_PATH).orEmpty()

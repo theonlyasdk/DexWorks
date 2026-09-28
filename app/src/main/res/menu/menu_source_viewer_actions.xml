@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_word_wrap"
+        android:checkable="true"
+        android:title="@string/settings_word_wrap"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_copy_text"
+        android:title="@string/viewer_copy_text"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_share_file"
+        android:title="@string/viewer_share"
+        app:showAsAction="never" />
+</menu>

@@ -1,17 +1,27 @@
 package com.asdk.tools.dexworks
 
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.AttributeSet
+import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
+import android.view.SoundEffectConstants
+import android.view.ViewConfiguration
+import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.PreferenceViewHolder
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 class PreferenceFragment : PreferenceFragmentCompat() {
 
@@ -73,14 +83,27 @@ class PreferenceFragment : PreferenceFragmentCompat() {
             true
         }
 
-        findPreference<Preference>(KEY_ABOUT)?.let { preference ->
+        findPreference<AboutPreference>(KEY_ABOUT)?.let { preference ->
+            val colorPrimary = com.google.android.material.color.MaterialColors.getColor(
+                preference.context,
+                androidx.appcompat.R.attr.colorPrimary,
+                0
+            )
+            preference.icon?.setTint(colorPrimary)
+            val versionName = readVersionName()
             preference.summary = getString(
                 R.string.settings_about_version,
-                readVersionName()
+                versionName
             )
-            preference.setOnPreferenceClickListener {
+            preference.onShortTap = {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.settings_about_toast, versionName),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            preference.onLongPress5Seconds = {
                 startActivity(Intent(requireContext(), VibrationTestActivity::class.java))
-                true
             }
         }
     }
@@ -97,9 +120,9 @@ class PreferenceFragment : PreferenceFragmentCompat() {
     private fun savedFolderSummary(): String {
         val uri = fileSaveHelper?.getRememberedLocation()
         return if (uri == null) {
-            getString(R.string.settings_saved_folder_none)
+            getString(R.string.settings_saved_folder_summary)
         } else {
-            uri.lastPathSegment?.substringAfterLast(':') ?: uri.toString()
+            "${getString(R.string.settings_saved_folder_summary)} (${uri.lastPathSegment?.substringAfterLast(':') ?: uri.toString()})"
         }
     }
 
@@ -117,8 +140,8 @@ class PreferenceFragment : PreferenceFragmentCompat() {
 
         if (helper.getRememberedLocation() == null) {
             MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.settings_choose_folder)
-                .setMessage(R.string.settings_saved_folder_none)
+                .setTitle(R.string.settings_saved_folder)
+                .setMessage(R.string.settings_saved_folder_summary)
                 .setPositiveButton(R.string.settings_choose_folder) { _, _ ->
                     helper.pickRememberedFolder()
                 }
@@ -180,3 +203,70 @@ class PreferenceFragment : PreferenceFragmentCompat() {
         const val KEY_ABOUT = "about"
     }
 }
+
+class AboutPreference @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = androidx.preference.R.attr.preferenceStyle,
+    defStyleRes: Int = 0
+) : Preference(context, attrs, defStyleAttr, defStyleRes) {
+
+    var onLongPress5Seconds: (() -> Unit)? = null
+    var onShortTap: (() -> Unit)? = null
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onBindViewHolder(holder: PreferenceViewHolder) {
+        super.onBindViewHolder(holder)
+        val view = holder.itemView
+        val touchSlop = ViewConfiguration.get(view.context).scaledTouchSlop
+        var downX = 0f
+        var downY = 0f
+        var hasTriggeredLongPress = false
+
+        val longPressRunnable = Runnable {
+            hasTriggeredLongPress = true
+            view.isPressed = false
+            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            onLongPress5Seconds?.invoke()
+        }
+
+        view.setOnTouchListener { v, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    downX = event.x
+                    downY = event.y
+                    hasTriggeredLongPress = false
+                    v.isPressed = true
+                    v.postDelayed(longPressRunnable, 5000L)
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = abs(event.x - downX)
+                    val dy = abs(event.y - downY)
+                    if (dx > touchSlop || dy > touchSlop) {
+                        v.removeCallbacks(longPressRunnable)
+                        v.isPressed = false
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    v.removeCallbacks(longPressRunnable)
+                    val wasPressed = v.isPressed
+                    v.isPressed = false
+                    if (!hasTriggeredLongPress && wasPressed) {
+                        v.playSoundEffect(SoundEffectConstants.CLICK)
+                        onShortTap?.invoke()
+                    }
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    v.removeCallbacks(longPressRunnable)
+                    v.isPressed = false
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+}
+

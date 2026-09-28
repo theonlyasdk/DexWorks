@@ -103,7 +103,7 @@ class ProjectsFragment : Fragment() {
             enterSelectionMode(project)
         },
         onItemMenuClick = { project, anchor ->
-            showProjectActionsMenu(project, anchor)
+            showProjectActionsSheet(project, anchor)
         }
     )
 
@@ -381,8 +381,10 @@ class ProjectsFragment : Fragment() {
         openProjectDetails(target)
     }
 
-    private fun showProjectActionsMenu(project: ProjectItem, anchor: View) {
-        ProjectActions.showMenu(requireContext(), anchor) { actionId ->
+    private fun showProjectActionsSheet(project: ProjectItem, anchor: View) {
+        // The row 3-dot opened a plain overflow popup, which duplicated the
+        // long-press bottom sheet one tap away. Both now land on the same sheet.
+        ProjectActions.showSheet(requireContext(), anchor, project.name) { actionId ->
             runProjectAction(project, actionId)
         }
     }
@@ -392,49 +394,16 @@ class ProjectsFragment : Fragment() {
         val apk = resolveApkFor(project)
         val root = _binding?.root ?: return
         val hasApk = !apk.isNullOrBlank() && File(apk).isFile
-        when (actionId) {
-            ProjectActions.ACTION_OPEN -> openProjectDetails(project)
-            ProjectActions.ACTION_APP_DETAILS -> if (hasApk) {
-                AppDetailActivity.start(requireContext(), apkPath = apk, fromProject = true)
-            } else {
-                ProjectActions.notImplemented(requireContext(), root)
-            }
-            ProjectActions.ACTION_DECOMPILE -> if (hasApk) {
-                ProjectActions.startDecompile(requireContext(), apk, project.name)
-            } else {
-                ProjectActions.notImplemented(requireContext(), root)
-            }
-            ProjectActions.ACTION_BROWSE_APK -> if (hasApk) {
-                startActivity(ApkBrowseActivity.createIntent(requireContext(), apk, project.name))
-            } else {
-                ProjectActions.notImplemented(requireContext(), root)
-            }
-            ProjectActions.ACTION_MANIFEST -> if (hasApk) {
-                startActivity(
-                    ManifestInspectorActivity.createIntent(
-                        requireContext(),
-                        apk,
-                        project.name,
-                        ""
-                    )
-                )
-            } else {
-                ProjectActions.notImplemented(requireContext(), root)
-            }
-            ProjectActions.ACTION_ANALYZE -> if (hasApk) {
-                startActivity(
-                    ApkAnalysisActivity.createIntent(requireContext(), apk, project.name)
-                )
-            } else {
-                ProjectActions.notImplemented(requireContext(), root)
-            }
-            ProjectActions.ACTION_SAVE_APK -> if (hasApk) {
-                FileSaveHelper.from(this).saveFile(File(apk), "project.apk", forcePickLocation = true)
-            } else {
-                ProjectActions.notImplemented(requireContext(), root)
-            }
-            ProjectActions.ACTION_DELETE -> confirmDeleteProject(project)
-        }
+        ProjectActions.run(
+            actionId = actionId,
+            apkPath = apk.orEmpty(),
+            projectName = project.name,
+            hasApk = hasApk,
+            context = requireContext(),
+            root = root,
+            projectPath = project.path,
+            onOpen = { openProjectDetails(project) }
+        )
     }
 
     private fun openProjectDetails(project: ProjectItem) {
@@ -549,6 +518,9 @@ class ProjectsFragment : Fragment() {
                     iconTint
                 )
             } else {
+                // Cleared so a decode still in flight for a previous project
+                // cannot match this row and overwrite the catalogue icon.
+                holder.binding.imgProjectIcon.setTag(R.id.tag_app_icon_package, null)
                 holder.binding.imgProjectIcon.imageTintList = iconTint
                 holder.binding.imgProjectIcon.setImageResource(
                     ProjectIconCatalog.iconRes(item.iconKey)

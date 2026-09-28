@@ -25,6 +25,11 @@ class ApkAnalysisResultActivity : AppCompatActivity() {
         const val TYPE_FRAMEWORK = "framework"
         const val TYPE_ARCHITECTURE = "architecture"
         const val TYPE_SECURITY = "security"
+        const val TYPE_COMPONENTS = "components"
+        const val TYPE_PERMISSIONS = "permissions"
+        const val TYPE_SIGNING = "signing"
+        const val TYPE_RESOURCES = "resources"
+        const val TYPE_COMPATIBILITY = "compatibility"
 
         fun createIntent(
             context: Context,
@@ -51,13 +56,7 @@ class ApkAnalysisResultActivity : AppCompatActivity() {
         binding = ActivityApkAnalysisResultBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
-            val systemBars = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()
-            )
-            view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        enableEdgeToEdgeWithPadding(binding.root)
 
         apkPath = intent.getStringExtra(EXTRA_APK_PATH).orEmpty()
         projectName = intent.getStringExtra(EXTRA_PROJECT_NAME).orEmpty()
@@ -70,6 +69,11 @@ class ApkAnalysisResultActivity : AppCompatActivity() {
             TYPE_FRAMEWORK -> binding.toolbar.setTitle(R.string.analysis_module_framework_title)
             TYPE_ARCHITECTURE -> binding.toolbar.setTitle(R.string.analysis_module_arch_title)
             TYPE_SECURITY -> binding.toolbar.setTitle(R.string.analysis_module_security_title)
+            TYPE_COMPONENTS -> binding.toolbar.setTitle(R.string.analysis_module_components_title)
+            TYPE_PERMISSIONS -> binding.toolbar.setTitle(R.string.analysis_module_permissions_title)
+            TYPE_SIGNING -> binding.toolbar.setTitle(R.string.analysis_module_signing_title)
+            TYPE_RESOURCES -> binding.toolbar.setTitle(R.string.analysis_module_resources_title)
+            TYPE_COMPATIBILITY -> binding.toolbar.setTitle(R.string.analysis_module_compat_title)
             else -> binding.toolbar.setTitle(R.string.title_analysis_results)
         }
 
@@ -102,6 +106,20 @@ class ApkAnalysisResultActivity : AppCompatActivity() {
                     val result = ApkMacroAnalyzer.analyzeProtection(apkPath)
                     withContext(Dispatchers.Main) {
                         renderSecurityResult(result)
+                    }
+                }
+                // The five newer modules all answer the same four questions, so
+                // they share one renderer rather than five near-identical ones.
+                else -> {
+                    val result = when (analysisType) {
+                        TYPE_COMPONENTS -> ApkMacroAnalyzer.analyzeComponents(this@ApkAnalysisResultActivity, apkPath)
+                        TYPE_PERMISSIONS -> ApkMacroAnalyzer.analyzePermissions(this@ApkAnalysisResultActivity, apkPath)
+                        TYPE_SIGNING -> ApkMacroAnalyzer.analyzeSigning(this@ApkAnalysisResultActivity, apkPath)
+                        TYPE_RESOURCES -> ApkMacroAnalyzer.analyzeResources(apkPath)
+                        else -> ApkMacroAnalyzer.analyzeCompatibility(this@ApkAnalysisResultActivity, apkPath)
+                    }
+                    withContext(Dispatchers.Main) {
+                        renderMacroResult(result)
                     }
                 }
             }
@@ -160,8 +178,15 @@ class ApkAnalysisResultActivity : AppCompatActivity() {
             false
         )
         itemBinding.textEvidencePath.text = path
-        itemBinding.imageEvidenceIcon.setImageResource(ApkEntryViewerRouter.iconFor(path))
-        itemBinding.rootEvidenceItem.setOnClickListener { openEvidence(path) }
+        // Only archive entries can be opened. The newer modules also list things
+        // that are not files, such as component and permission names, and wiring
+        // those up only produced a "could not open" toast on every tap.
+        if (path.contains('/')) {
+            itemBinding.imageEvidenceIcon.setImageResource(ApkEntryViewerRouter.iconFor(path))
+            itemBinding.rootEvidenceItem.setOnClickListener { openEvidence(path) }
+        } else {
+            itemBinding.imageEvidenceIcon.setImageResource(R.drawable.ic_info)
+        }
         binding.containerEvidenceFiles.addView(itemBinding.root)
     }
 
@@ -214,6 +239,43 @@ class ApkAnalysisResultActivity : AppCompatActivity() {
             binding.containerEvidenceFiles.addView(emptyBinding.root)
         } else {
             result.nativeLibraries.forEach { lib -> addEvidenceRow(lib) }
+        }
+    }
+
+    /** Renders the shared [ApkMacroAnalyzer.MacroResult] shape for newer modules. */
+    private fun renderMacroResult(result: ApkMacroAnalyzer.MacroResult) {
+        binding.layoutLoading.isVisible = false
+        binding.scrollResultContent.isVisible = true
+
+        binding.textPrimaryFramework.text = result.headline
+        binding.textFrameworkDescription.text = result.description
+        binding.chipConfidence.text = result.confidenceText
+
+        binding.layoutSecondaryFrameworks.isVisible = result.chips.isNotEmpty()
+        binding.chipGroupSecondary.removeAllViews()
+        result.chips.forEach { label ->
+            val chip = Chip(this).apply {
+                text = label
+                isClickable = false
+                isFocusable = false
+            }
+            binding.chipGroupSecondary.addView(chip)
+        }
+
+        binding.textEvidenceHeader.text =
+            getString(R.string.analysis_result_matched_evidence, result.evidence.size)
+
+        binding.containerEvidenceFiles.removeAllViews()
+        if (result.evidence.isEmpty()) {
+            val emptyBinding = ItemAnalysisEvidenceFileBinding.inflate(
+                layoutInflater,
+                binding.containerEvidenceFiles,
+                false
+            )
+            emptyBinding.textEvidencePath.setText(R.string.analysis_result_no_evidence)
+            binding.containerEvidenceFiles.addView(emptyBinding.root)
+        } else {
+            result.evidence.forEach { entry -> addEvidenceRow(entry) }
         }
     }
 

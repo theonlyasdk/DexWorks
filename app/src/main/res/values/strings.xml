@@ -9,24 +9,7 @@
     <!-- Browse tab -->
     <string name="search_placeholder">Search apps and APKs…</string>
     <string name="cd_alphabet_index">Fast scroll</string>
-    <string name="sample_app_1_name">Calculator Pro</string>
-    <string name="sample_app_1_package">com.example.calculator</string>
-    <string name="sample_app_1_details">v2.4.1 • 14.2 MB</string>
-    <string name="sample_app_2_name">FileManager Plus</string>
-    <string name="sample_app_2_package">com.example.filemanager</string>
-    <string name="sample_app_2_details">v1.1.0 • 8.7 MB</string>
-    <string name="sample_app_3_name">Pixel Arcade</string>
-    <string name="sample_app_3_package">com.example.pixelarcade</string>
-    <string name="sample_app_3_details">v3.0.2 • 45.1 MB</string>
-    <string name="sample_app_4_name">Audio Streamer</string>
-    <string name="sample_app_4_package">com.example.audiostreamer</string>
-    <string name="sample_app_4_details">v1.8.5 • 22.0 MB</string>
-    <string name="sample_app_5_name">Web Navigator</string>
-    <string name="sample_app_5_package">com.example.webnav</string>
-    <string name="sample_app_5_details">v4.1.0 • 18.9 MB</string>
-    <string name="sample_app_6_name">Notes &amp; Tasks</string>
-    <string name="sample_app_6_package">com.example.notes</string>
-    <string name="sample_app_6_details">v2.0.0 • 6.4 MB</string>
+
 
     <!-- Projects tab -->
     <string name="projects_empty_title">No Projects</string>
@@ -35,23 +18,23 @@
     <string name="cd_add_project">Create project</string>
     <string name="wizard_project_title">New project</string>
     <string name="title_project_options">Project options</string>
-    <string name="project_options_app_details">App details</string>
-    <string name="project_options_app_details_desc">View package information and components</string>
-    <string name="project_options_decompile">Decompile</string>
-    <string name="project_options_decompile_desc">Turn DEX files into readable source</string>
-    <string name="project_options_apk_browse">APK browse</string>
-    <string name="project_options_apk_browse_desc">Browse the contents of the APK</string>
-    <string name="project_options_manifest_viewer">Manifest viewer</string>
-    <string name="project_options_manifest_viewer_desc">Inspect the decoded AndroidManifest.xml</string>
-    <string name="project_options_no_apk">Import an APK to enable project actions.</string>
-    <string name="title_apk_browse">APK browse</string>
+    <string name="project_options_app_details">App Information</string>
+    <string name="project_options_app_details_desc">Package information and app details including permissions, activities and Android version</string>
+    <string name="project_options_decompile">DEX Decompiler</string>
+    <string name="project_options_decompile_desc">Decompile DEX into Smali or Java files with CFR and baksmali</string>
+    <string name="project_options_apk_browse">APK Browser</string>
+    <string name="project_options_apk_browse_desc">Explore and browse contents of this application APK</string>
+    <string name="project_options_manifest_viewer">Manifest Viewer</string>
+    <string name="project_options_manifest_viewer_desc">View and analyze AndroidManifest.xml</string>
+    <string name="project_options_no_apk">Import an APK to see project actions!</string>
+    <string name="title_apk_browse">APK browser</string>
     <string name="apk_browse_root">APK root</string>
     <string name="apk_browse_empty">This folder is empty</string>
     <string name="apk_browse_error">Could not read this APK</string>
     <string name="title_xml_viewer">Text Viewer</string>
     <string name="title_hex_viewer">Hex Viewer</string>
-    <string name="error_loading_xml">Could not decode this XML file</string>
-    <string name="error_loading_hex">Could not read this file</string>
+    <string name="error_loading_xml">Could not decode this XML file!</string>
+    <string name="error_loading_hex">Could not read this file!</string>
     <string name="hex_info">%1$s</string>
     <string name="hex_info_truncated">%1$s • showing first %2$s</string>
     <string name="hex_range">%1$s – %2$s of %3$s</string>
@@ -60,7 +43,7 @@
     <string name="hex_page">Page %1$d of %2$d</string>
     <string name="apk_browse_save_to">Save to…</string>
     <string name="apk_image_page_indicator">%1$d of %2$d</string>
-    <string name="apk_browse_save_failed">Could not save this file</string>
+    <string name="apk_browse_save_failed">Could not save this file!</string>
     <string name="apk_browse_root_label">%1$s.apk</string>
     <string name="hex_prev_page">Previous</string>
     <string name="hex_next_page">Next</string>
@@ -83,7 +66,7 @@
     <string name="apk_browse_copy_path">Copy path</string>
     <string name="apk_browse_share_entry">Share…</string>
     <string name="apk_browse_file_info">Details…</string>
-    <string name="apk_browse_share">Share APK entry</string>
+    <string name="apk_browse_share">Share APK</string>
     <string name="apk_browse_copied">Path copied</string>
     <string name="apk_browse_info_message">Type: %1$s\nSize: %2$s\nPath: %3$s\nCompressed: %4$s\nCompression: %5$s\nCRC-32: %6$s\nModified: %7$s\nViewer: %8$s</string>
     <string name="apk_browse_info_folder">Folder\nPath: %1$s</string>
@@ -207,23 +190,14 @@
     <string name="project_icon_view">View</string>
     <string name="project_icon_week">Week</string>
     <string name="project_icon_zoom">Zoom</string>
-    <string name="project_1_name">DexWorks.apk</string>
-    <string name="project_1_date">Modified 2 hours ago</string>
-    <string name="project_1_path">/storage/emulated/0/DexWorks/projects/DexWorks</string>
-    <string name="project_2_name">InjectedPayload.apk</string>
-    <string name="project_2_date">Modified yesterday</string>
-    <string name="project_2_path">/storage/emulated/0/DexWorks/projects/InjectedPayload</string>
-    <string name="project_3_name">SecurityPatchTest.apk</string>
-    <string name="project_3_date">Modified Sep 18, 2026</string>
-    <string name="project_3_path">/storage/emulated/0/DexWorks/projects/SecurityPatchTest</string>
 
-    <!-- Tools tab -->
+    <!-- App Detail and APK Browsing -->
     <string name="tool_decompiler_name">Decompiler</string>
     <string name="tool_decompiler_desc">Decompile DEX bytecode into Java source or Smali</string>
     <string name="tool_disassembler_name">Disassembler</string>
     <string name="tool_disassembler_desc">Disassemble DEX into Smali assembly representation</string>
     <string name="tool_extractor_name">APK Extractor</string>
-    <string name="tool_extractor_desc">Extract installed APK files and assets to storage</string>
+    <string name="tool_extractor_desc">Extract installed APK files to storage</string>
     <string name="tool_manifest_name">Manifest Viewer</string>
     <string name="tool_manifest_desc">Decode and inspect binary AndroidManifest.xml</string>
 
@@ -276,7 +250,7 @@
     <string name="action_save_apk_to">Save APK to…</string>
     <string name="action_import_as_project">Import as project…</string>
     <string name="dialog_remember_location_title">Remember this location?</string>
-    <string name="dialog_remember_location_message">Do you want DexWorks to remember this directory as your default APK export location?</string>
+    <string name="dialog_remember_location_message">Set this directory as your default APK export location?</string>
     <string name="action_remember">Remember</string>
     <string name="action_not_now">Not now</string>
     <string name="toast_apk_saved">APK saved successfully</string>
@@ -326,6 +300,46 @@
     <string name="activity_launch_cause_unknown">The system returned an unclassified launch error.</string>
     <string name="activity_launch_failure_no_details">No additional system details were provided.</string>
     <string name="action_copy_error">Copy error</string>
+
+    <!-- Device Summary Export -->
+    <string name="action_export_device_summary">Export device summary</string>
+    <string name="title_device_summary">Device Summary</string>
+    <string name="device_summary_loading">Loading apps…</string>
+    <string name="device_summary_copy_button">Copy as AI Prompt</string>
+    <string name="device_summary_copy_done">Copied</string>
+    <string name="device_summary_share_button">Share</string>
+    <string name="device_summary_copied">Copied to clipboard</string>
+    <string name="device_summary_device_info">Device Information</string>
+    <string name="device_summary_android_version">Android Version</string>
+    <string name="device_summary_device_model">Device Model</string>
+    <string name="device_summary_manufacturer">Manufacturer</string>
+    <string name="device_summary_total_apps">Total Apps</string>
+    <string name="device_summary_user_apps">User Apps</string>
+    <string name="device_summary_system_apps">System Apps</string>
+    <string name="device_summary_total_size">Total Size</string>
+    <string name="device_summary_app_list">Installed Apps</string>
+    <string name="device_summary_app_item_format">- %1$s (%2$s) — %3$s — %4$s</string>
+    <string name="device_summary_prompt_header">Device Summary for AI Context</string>
+    <string name="device_summary_prompt_instruction">Below is a summary of this Android device and its installed applications. Use this context when answering questions about the device or its apps.</string>
+    <string name="device_summary_categories">What to include</string>
+    <string name="device_summary_categories_summary">Tick the parts of the device you want in the copied text</string>
+    <string name="device_summary_select_all">Select all</string>
+    <string name="device_summary_selected_count">%1$d of %2$d sections selected</string>
+    <string name="device_summary_nothing_selected">Tick a section to copy</string>
+    <string name="device_summary_cat_device">Device information</string>
+    <string name="device_summary_cat_device_desc">Android version, model, manufacturer, build</string>
+    <string name="device_summary_cat_user_apps">User apps</string>
+    <string name="device_summary_cat_user_apps_desc">%1$d apps, %2$s</string>
+    <string name="device_summary_cat_system_apps">System apps</string>
+    <string name="device_summary_cat_system_apps_desc">%1$d apps, %2$s</string>
+    <string name="device_summary_cat_store_apps">Installed from a store</string>
+    <string name="device_summary_cat_store_apps_desc">%1$d apps from app stores</string>
+    <string name="device_summary_cat_sideloaded_apps">Sideloaded apps</string>
+    <string name="device_summary_cat_sideloaded_apps_desc">%1$d apps not from a store</string>
+    <string name="device_summary_cat_largest_apps">Largest apps</string>
+    <string name="device_summary_cat_largest_apps_desc">Top %1$d apps by size</string>
+    <string name="device_summary_cat_recent_apps">Recently updated</string>
+    <string name="device_summary_cat_recent_apps_desc">Top %1$d apps by last update</string>
     <string name="activity_launch_failure_copy_label">Activity launch error</string>
     <string name="activity_launch_exception_copy_text">Exception: %1$s\nSystem details: %2$s</string>
     <string name="activity_launch_failure_details">Component: %1$s\nException: %2$s\nSystem details: %3$s</string>
@@ -358,43 +372,6 @@
     <string name="notif_zip_failed_text">Could not save the zip file</string>
     <string name="notif_zip_progress_title">Zipping %1$s</string>
 
-
-    <string name="lorem_ipsum">
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
-        volutpat, dolor id interdum ullamcorper, risus dolor egestas lectus, sit amet mattis purus
-        dui nec risus. Maecenas non sodales nisi, vel dictum dolor. Class aptent taciti sociosqu ad
-        litora torquent per conubia nostra, per inceptos himenaeos. Suspendisse blandit eleifend
-        diam, vel rutrum tellus vulputate quis. Aliquam eget libero aliquet, imperdiet nisl a,
-        ornare ex. Sed rhoncus est ut libero porta lobortis. Fusce in dictum tellus.\n\n
-        Suspendisse interdum ornare ante. Aliquam nec cursus lorem. Morbi id magna felis. Vivamus
-        egestas, est a condimentum egestas, turpis nisl iaculis ipsum, in dictum tellus dolor sed
-        neque. Morbi tellus erat, dapibus ut sem a, iaculis tincidunt dui. Interdum et malesuada
-        fames ac ante ipsum primis in faucibus. Curabitur et eros porttitor, ultricies urna vitae,
-        molestie nibh. Phasellus at commodo eros, non aliquet metus. Sed maximus nisl nec dolor
-        bibendum, vel congue leo egestas.\n\n
-        Sed interdum tortor nibh, in sagittis risus mollis quis. Curabitur mi odio, condimentum sit
-        amet auctor at, mollis non turpis. Nullam pretium libero vestibulum, finibus orci vel,
-        molestie quam. Fusce blandit tincidunt nulla, quis sollicitudin libero facilisis et. Integer
-        interdum nunc ligula, et fermentum metus hendrerit id. Vestibulum lectus felis, dictum at
-        lacinia sit amet, tristique id quam. Cras eu consequat dui. Suspendisse sodales nunc ligula,
-        in lobortis sem porta sed. Integer id ultrices magna, in luctus elit. Sed a pellentesque
-        est.\n\n
-        Aenean nunc velit, lacinia sed dolor sed, ultrices viverra nulla. Etiam a venenatis nibh.
-        Morbi laoreet, tortor sed facilisis varius, nibh orci rhoncus nulla, id elementum leo dui
-        non lorem. Nam mollis ipsum quis auctor varius. Quisque elementum eu libero sed commodo. In
-        eros nisl, imperdiet vel imperdiet et, scelerisque a mauris. Pellentesque varius ex nunc,
-        quis imperdiet eros placerat ac. Duis finibus orci et est auctor tincidunt. Sed non viverra
-        ipsum. Nunc quis augue egestas, cursus lorem at, molestie sem. Morbi a consectetur ipsum, a
-        placerat diam. Etiam vulputate dignissim convallis. Integer faucibus mauris sit amet finibus
-        convallis.\n\n
-        Phasellus in aliquet mi. Pellentesque habitant morbi tristique senectus et netus et
-        malesuada fames ac turpis egestas. In volutpat arcu ut felis sagittis, in finibus massa
-        gravida. Pellentesque id tellus orci. Integer dictum, lorem sed efficitur ullamcorper,
-        libero justo consectetur ipsum, in mollis nisl ex sed nisl. Donec maximus ullamcorper
-        sodales. Praesent bibendum rhoncus tellus nec feugiat. In a ornare nulla. Donec rhoncus
-        libero vel nunc consequat, quis tincidunt nisl eleifend. Cras bibendum enim a justo luctus
-        vestibulum. Fusce dictum libero quis erat maximus, vitae volutpat diam dignissim.
-    </string>
 
     <!-- APK Size Analysis -->
     <string name="title_apk_size_analysis">Size Analysis</string>
@@ -459,20 +436,21 @@
     <string name="settings_folders_first_summary">Keep folders at the top when sorting an APK</string>
 
     <string name="settings_cat_viewers">Viewers</string>
-    <string name="settings_hex_page">Hex page size</string>
+    <string name="settings_hex_page">HexViewer Single Page Size</string>
     <string name="settings_hex_page_dialog">Pick hex page size</string>
     <string name="settings_page_1mb">1 MB per page</string>
     <string name="settings_page_4mb">4 MB per page</string>
     <string name="settings_page_8mb">8 MB per page</string>
-    <string name="settings_image_size">Maximum image size</string>
+    <string name="settings_image_size">ImageViewer Max Image Size</string>
     <string name="settings_image_size_dialog">Pick maximum image size</string>
     <string name="settings_image_1024">1024 px</string>
     <string name="settings_image_2048">2048 px</string>
     <string name="settings_image_4096">4096 px</string>
 
     <string name="settings_cat_saving">Saving</string>
-    <string name="settings_saved_folder">Remembered save folder</string>
-    <string name="settings_saved_folder_none">Not set, you will be asked each time</string>
+    <string name="settings_saved_folder">Default Save Location</string>
+    <string name="settings_saved_folder_summary">Exported APK files will be saved here</string>
+    <string name="settings_saved_folder_none">Exported APK files will be saved here</string>
     <string name="settings_choose_folder">Choose folder</string>
     <string name="settings_forget_folder">Forget folder</string>
     <string name="settings_folder_chosen">Save folder updated</string>
@@ -484,11 +462,12 @@
 
     <string name="settings_cat_notifications">Notifications</string>
     <string name="settings_notifications">Notifications</string>
-    <string name="settings_notifications_summary">Tell me when a long running job finishes</string>
+    <string name="settings_notifications_summary">Notify me when background tasks are happening</string>
 
     <string name="settings_cat_about">About</string>
     <string name="settings_about">About DexWorks</string>
     <string name="settings_about_version">Version %1$s</string>
+    <string name="settings_about_toast">Designed with ❤️ by theonlyasdk\nVersion %1$s</string>
     <string name="settings_about_close">Close</string>
 
     <!-- Tools tab additional -->
@@ -523,7 +502,7 @@
     <string name="vibration_points_count">Points (%1$d)</string>
     <string name="vibration_frequency">Frequency: %1$d Hz</string>
     <string name="vibration_frequency_float">Frequency: %1$.1f Hz</string>
-    <string name="vibration_lfo_title">Frequency LFO / Modulation</string>
+    <string name="vibration_lfo_title">Frequency Modulation</string>
     <string name="vibration_lfo_enable">Frequency Modulation (LFO)</string>
     <string name="vibration_lfo_shape_ramp">Ramp Up (Sweep)</string>
     <string name="vibration_lfo_shape_sine">Sine LFO</string>
@@ -608,6 +587,16 @@
     <string name="analysis_module_arch_desc">Inspect supported ABIs, native .so binaries, and architecture dependencies</string>
     <string name="analysis_module_security_title">Protection &amp; Obfuscation</string>
     <string name="analysis_module_security_desc">Check for code shrinking (R8/ProGuard), DEX packers, and hardening wrappers</string>
+    <string name="analysis_module_components_title">Manifest &amp; Components</string>
+    <string name="analysis_module_components_desc">Count activities, services, receivers, and providers, and see which are exported</string>
+    <string name="analysis_module_permissions_title">Permissions</string>
+    <string name="analysis_module_permissions_desc">List of all permissions requested by app, with the dangerous ones specially marked</string>
+    <string name="analysis_module_signing_title">Signing &amp; Integrity</string>
+    <string name="analysis_module_signing_desc">Signature scheme files, plus debuggable and test-only build flags</string>
+    <string name="analysis_module_resources_title">Resources &amp; Assets</string>
+    <string name="analysis_module_resources_desc">Resource table size, compiled resources, assets, and the largest files</string>
+    <string name="analysis_module_compat_title">SDK &amp; Compatibility</string>
+    <string name="analysis_module_compat_desc">Minimum and target SDK, required features, and density buckets</string>
     <string name="title_analysis_results">Analysis Results</string>
     <string name="analysis_analyzing">Analyzing APK contents…</string>
     <string name="analysis_analyzing_subtitle">Scanning package entries and binary signatures</string>
@@ -635,6 +624,8 @@
     <string name="decompile_backend_cfr">CFR</string>
     <string name="dialog_decompile_dex_title">Decompile DEX file</string>
     <string name="dialog_decompile_dex_message">Do you want to decompile %1$s?</string>
+    <string name="decompile_choose_dex_title">Choose a DEX file</string>
+    <string name="decompile_choose_dex_message">Select the DEX file to decompile.</string>
     <string name="dialog_decompile_confirm">Decompile</string>
     <string name="dialog_decompile_cancel">Cancel</string>
     <string name="title_decompile">Decompile DEX</string>
@@ -655,8 +646,6 @@
     <string name="decompile_cancel_message">The current operation will stop and partial output will be discarded.</string>
     <string name="decompile_cancelled">Decompilation cancelled.</string>
     <string name="decompile_cancelled_title">Decompilation cancelled</string>
-    <string name="decompile_choose_dex_title">Choose a DEX file</string>
-    <string name="decompile_choose_dex_message">Select the DEX file to decompile.</string>
     <string name="decompile_scanning_dex">Finding DEX files…</string>
     <string name="decompile_error_title">Could not start decompilation</string>
     <string name="decompile_error_missing_apk">The selected APK is no longer available.</string>
@@ -667,6 +656,8 @@
     <string name="decompile_error_output">No source files were produced. Check the decompiler log for details.</string>
     <string name="decompile_running_title">Decompiling…</string>
     <string name="decompile_running_status">Processing %1$s as %2$s</string>
+
+
     <string name="decompile_progress_detail">%1$d / %2$d files</string>
     <string name="decompile_progress_rate">%1$d/s • %2$s left</string>
     <string name="decompile_option_workers">Worker threads</string>

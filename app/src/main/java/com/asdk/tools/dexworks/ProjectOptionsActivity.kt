@@ -4,14 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import com.asdk.tools.dexworks.databinding.ActivityProjectOptionsBinding
-import com.google.android.material.snackbar.Snackbar
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 
 class ProjectOptionsActivity : AppCompatActivity() {
@@ -63,18 +58,11 @@ class ProjectOptionsActivity : AppCompatActivity() {
         val hasApk = apkPath.isNotBlank() && File(apkPath).isFile
         binding.textNoApk.isVisible = !hasApk
 
-        // The 3-dot offers the same actions as the long-press sheet in the
-        // projects list, driven by the same ProjectActions definition.
-        binding.toolbar.inflateMenu(R.menu.menu_project_options)
-        binding.toolbar.setOnMenuItemClickListener { item ->
-            if (item.itemId == R.id.action_project_options_more) {
-                ProjectActions.showMenu(this, binding.toolbar) { actionId ->
-                    runProjectAction(actionId, hasApk)
-                }
-                true
-            } else {
-                false
-            }
+        // The toolbar's own overflow offers the same actions as the long-press
+        // sheet in the projects list, driven by the same ProjectActions
+        // definition, so the platform renders and anchors the 3-dot itself.
+        ProjectActions.installInToolbar(binding.toolbar) { actionId ->
+            runProjectAction(actionId, hasApk)
         }
 
         setupCard(binding.cardAppDetails, hasApk) {
@@ -105,41 +93,16 @@ class ProjectOptionsActivity : AppCompatActivity() {
     }
 
     private fun runProjectAction(actionId: Int, hasApk: Boolean) {
-        when (actionId) {
-            ProjectActions.ACTION_OPEN -> finish()
-            ProjectActions.ACTION_APP_DETAILS -> if (hasApk) {
-                AppDetailActivity.start(this, apkPath = apkPath, fromProject = true)
-            } else {
-                ProjectActions.notImplemented(this, binding.root)
-            }
-            ProjectActions.ACTION_DECOMPILE -> {
-                ProjectActions.startDecompile(this, apkPath, projectName)
-            }
-            ProjectActions.ACTION_BROWSE_APK -> if (hasApk) {
-                startActivity(ApkBrowseActivity.createIntent(this, apkPath, projectName))
-            } else {
-                ProjectActions.notImplemented(this, binding.root)
-            }
-            ProjectActions.ACTION_MANIFEST -> if (hasApk) {
-                startActivity(
-                    ManifestInspectorActivity.createIntent(this, apkPath, projectName, "")
-                )
-            } else {
-                ProjectActions.notImplemented(this, binding.root)
-            }
-            ProjectActions.ACTION_ANALYZE -> if (hasApk) {
-                startActivity(ApkAnalysisActivity.createIntent(this, apkPath, projectName))
-            } else {
-                ProjectActions.notImplemented(this, binding.root)
-            }
-            ProjectActions.ACTION_SAVE_APK -> if (hasApk) {
-                FileSaveHelper.from(this)
-                    .saveFile(File(apkPath), "project.apk", forcePickLocation = true)
-            } else {
-                ProjectActions.notImplemented(this, binding.root)
-            }
-            ProjectActions.ACTION_DELETE -> confirmDeleteProject()
-        }
+        ProjectActions.run(
+            actionId = actionId,
+            apkPath = apkPath,
+            projectName = projectName,
+            hasApk = hasApk,
+            context = this,
+            root = binding.root,
+            projectPath = projectPath,
+            onOpen = { finish() }
+        )
     }
 
     private fun setupCard(card: View, enabled: Boolean, onClick: () -> Unit) {

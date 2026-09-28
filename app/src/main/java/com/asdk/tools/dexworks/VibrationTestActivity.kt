@@ -38,7 +38,6 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.math.sqrt
-import com.asdk.tools.dexworks.AppInfoUtils.dp
 
 class VibrationTestActivity : AppCompatActivity() {
 

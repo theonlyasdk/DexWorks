@@ -26,4 +26,9 @@
         android:icon="@drawable/ic_analytics"
         android:title="@string/apk_browse_analyze"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_export_device_summary"
+        android:icon="@drawable/ic_copy"
+        android:title="@string/action_export_device_summary"
+        app:showAsAction="never" />
 </menu>

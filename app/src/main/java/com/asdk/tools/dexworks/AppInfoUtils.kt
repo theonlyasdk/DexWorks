@@ -364,11 +364,15 @@ object AppInfoUtils {
         }
     }
 }
- 
-    /**
-     * Converts dp to pixels using the system display metrics.
-     * Centralized here so every call site shares one implementation.
-     */
-    fun Context.dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
-    fun Context.dp(value: Float): Float = value * resources.displayMetrics.density
-}
+
+/** Converts dp to pixels, replacing the inline density maths repeated across activities. */
+fun Context.dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+/** Float form for translations and radii that must stay fractional. */
+fun Context.dp(value: Float): Float = value * resources.displayMetrics.density
+
+fun Int.dp(): Int = (this * android.content.res.Resources.getSystem().displayMetrics.density).toInt()
+fun Float.dp(): Float = this * android.content.res.Resources.getSystem().displayMetrics.density
+val Int.dp: Int get() = (this * android.content.res.Resources.getSystem().displayMetrics.density).toInt()
+val Float.dp: Float get() = this * android.content.res.Resources.getSystem().displayMetrics.density
+

@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.core.widget.addTextChangedListener
@@ -47,20 +48,14 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        enableEdgeToEdgeWithPadding(binding.topBarContainer)
+        // Top only: the container is a wrap_content header, and the general helper
+        // also gave it the navigation bar and keyboard height as bottom padding,
+        // which showed up as a dead band between the search bar and the content
+        // below it, in both tabs. It was also called twice here.
+        enableEdgeToEdgeWithTopPadding(binding.topBarContainer)
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
-        }
-
-        ViewCompat.setOnApplyWindowInsetsListener(binding.topBarContainer) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.updatePadding(
-                left = systemBars.left,
-                top = systemBars.top,
-                right = systemBars.right
-            )
-            insets
         }
 
         setSupportActionBar(binding.toolbar)

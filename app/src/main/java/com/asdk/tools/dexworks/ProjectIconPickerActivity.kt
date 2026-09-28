@@ -17,7 +17,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.asdk.tools.dexworks.databinding.ActivityProjectIconPickerBinding
 import com.asdk.tools.dexworks.databinding.ItemProjectIconBinding
 import com.google.android.material.color.MaterialColors
-import com.asdk.tools.dexworks.AppInfoUtils.dp
 
 class ProjectIconPickerActivity : AppCompatActivity() {
 

@@ -94,6 +94,7 @@
 
     <Preference
         app:key="remembered_save_location"
+        app:summary="@string/settings_saved_folder_summary"
         app:title="@string/settings_saved_folder" />
 
     <Preference
@@ -111,7 +112,8 @@
 
     <PreferenceCategory app:title="@string/settings_cat_about" />
 
-    <Preference
+    <com.asdk.tools.dexworks.AboutPreference
+        app:icon="@drawable/ic_dexworks_logo"
         app:key="about"
         app:title="@string/settings_about" />
 

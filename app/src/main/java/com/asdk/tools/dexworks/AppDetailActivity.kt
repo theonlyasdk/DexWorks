@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import com.asdk.tools.dexworks.DeviceSummaryActivity
 import com.google.android.material.appbar.MaterialToolbar
 
 class AppDetailActivity : AppCompatActivity() {
@@ -165,6 +166,10 @@ class AppDetailActivity : AppCompatActivity() {
                     )
                 )
             }
+            return true
+        }
+        if (item.itemId == R.id.action_export_device_summary) {
+            startActivity(DeviceSummaryActivity.createIntent(this))
             return true
         }
         val fragment = supportFragmentManager.findFragmentById(R.id.detail_container) as? AppDetailFragment

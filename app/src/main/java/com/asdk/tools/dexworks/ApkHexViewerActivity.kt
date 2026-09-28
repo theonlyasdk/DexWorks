@@ -53,12 +53,7 @@ class ApkHexViewerActivity : AppCompatActivity(), HexDumpView.Listener {
         binding = ActivityApkHexViewerBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
-        ViewCompat.requestApplyInsets(binding.root)
+        enableEdgeToEdgeWithPadding(binding.root)
 
         apkPath = intent.getStringExtra(EXTRA_APK_PATH).orEmpty()
         entryPath = intent.getStringExtra(EXTRA_ENTRY_PATH).orEmpty()

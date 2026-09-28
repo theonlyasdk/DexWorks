@@ -24,7 +24,7 @@
             android:id="@+id/img_project_icon"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:scaleType="centerInside"
+            android:scaleType="centerCrop"
             android:src="@drawable/ic_folder_open"
             app:tint="?attr/colorPrimary"
             app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium"

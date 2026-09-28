@@ -3,7 +3,6 @@ package com.asdk.tools.dexworks
 import android.view.MotionEvent
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.asdk.tools.dexworks.AppInfoUtils.dp
 
 class DragSelectTouchListener(
     private val onSelectRange: (startPosition: Int, endPosition: Int) -> Unit,

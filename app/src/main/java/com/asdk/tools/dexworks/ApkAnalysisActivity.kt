@@ -31,13 +31,7 @@ class ApkAnalysisActivity : AppCompatActivity() {
         binding = ActivityApkAnalysisBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
-            val systemBars = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()
-            )
-            view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        enableEdgeToEdgeWithPadding(binding.root)
 
         apkPath = intent.getStringExtra(EXTRA_APK_PATH).orEmpty()
         projectName = intent.getStringExtra(EXTRA_PROJECT_NAME).orEmpty()
@@ -76,6 +70,27 @@ class ApkAnalysisActivity : AppCompatActivity() {
                     ApkAnalysisResultActivity.TYPE_SECURITY
                 )
             )
+        }
+
+        // The newer modules all follow the same shape, so one map drives them
+        // instead of five near-identical click blocks.
+        mapOf(
+            binding.cardComponentsAnalysis to ApkAnalysisResultActivity.TYPE_COMPONENTS,
+            binding.cardPermissionsAnalysis to ApkAnalysisResultActivity.TYPE_PERMISSIONS,
+            binding.cardSigningAnalysis to ApkAnalysisResultActivity.TYPE_SIGNING,
+            binding.cardResourcesAnalysis to ApkAnalysisResultActivity.TYPE_RESOURCES,
+            binding.cardCompatibilityAnalysis to ApkAnalysisResultActivity.TYPE_COMPATIBILITY
+        ).forEach { (card, type) ->
+            card.setOnClickListener {
+                startActivity(
+                    ApkAnalysisResultActivity.createIntent(
+                        this,
+                        apkPath,
+                        projectName,
+                        type
+                    )
+                )
+            }
         }
     }
 }

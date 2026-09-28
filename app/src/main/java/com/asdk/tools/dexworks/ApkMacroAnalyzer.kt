@@ -1,5 +1,6 @@
 package com.asdk.tools.dexworks
 
+import android.content.Context
 import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
@@ -34,6 +35,21 @@ object ApkMacroAnalyzer {
         val isObfuscated: Boolean,
         val matchedMarkers: List<String>,
         val details: String
+    )
+
+    /**
+     * One analysis module's worth of output.
+     *
+     * Every module answers the same four questions, so they share a single shape
+     * and the result screen renders them all through one function instead of
+     * growing a near-identical renderer per module.
+     */
+    data class MacroResult(
+        val headline: String,
+        val description: String,
+        val confidenceText: String,
+        val chips: List<String>,
+        val evidence: List<String>
     )
 
     fun analyzeFramework(apkPath: String): FrameworkResult {
@@ -335,4 +351,215 @@ object ApkMacroAnalyzer {
             details = details
         )
     }
+
+    private fun entriesOf(apkPath: String): List<Pair<String, Long>> {
+        val file = File(apkPath)
+        if (!file.exists() || !file.canRead()) return emptyList()
+        return try {
+            ZipFile(file).use { zip ->
+                val out = mutableListOf<Pair<String, Long>>()
+                val zipEntries = zip.entries()
+                while (zipEntries.hasMoreElements()) {
+                    val entry: ZipEntry = zipEntries.nextElement()
+                    out.add(entry.name to entry.size)
+                }
+                out
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun archiveInfo(context: Context, apkPath: String) =
+        AppInfoUtils.getPackageArchiveInfo(context, apkPath)
+
+    fun analyzeComponents(context: Context, apkPath: String): MacroResult {
+        val info = archiveInfo(context, apkPath)
+            ?: return unreadableMacro("Components")
+        val activities = info.activities.orEmpty()
+        val services = info.services.orEmpty()
+        val receivers = info.receivers.orEmpty()
+        val providers = info.providers.orEmpty()
+        val total = activities.size + services.size + receivers.size + providers.size
+        // Counted per array: concatenating them widens the element type to
+        // ComponentInfo, which does not declare `exported`.
+        val exported = activities.count { it.exported } +
+            services.count { it.exported } +
+            receivers.count { it.exported }
+
+        return MacroResult(
+            headline = "$total components",
+            description = "Declared components: ${activities.size} activities, ${services.size} services, " +
+                "${receivers.size} receivers, ${providers.size} providers. " +
+                "$exported of them are exported and can be reached by other apps.",
+            confidenceText = if (total == 0) "No Components" else "Manifest Parsed",
+            chips = listOf(
+                "Activities: ${activities.size}",
+                "Services: ${services.size}",
+                "Receivers: ${receivers.size}",
+                "Providers: ${providers.size}",
+                "Exported: $exported"
+            ),
+            evidence = (activities.take(40) + services.take(20) + receivers.take(20) + providers.take(20))
+                .map { it.name }
+        )
+    }
+
+    fun analyzePermissions(context: Context, apkPath: String): MacroResult {
+        val info = archiveInfo(context, apkPath)
+            ?: return unreadableMacro("Permissions")
+        val permissions = info.requestedPermissions.orEmpty().sorted()
+        val dangerous = permissions.filter { it.substringAfterLast('.') in DANGEROUS_PERMISSION_SUFFIXES }
+
+        return MacroResult(
+            headline = "${permissions.size} permissions",
+            description = "The manifest requests ${permissions.size} permissions, " +
+                "${dangerous.size} of them at the dangerous protection level. " +
+                "Every declared permission is listed in the evidence below.",
+            confidenceText = if (permissions.isEmpty()) "None Requested" else "${dangerous.size} Dangerous",
+            chips = if (dangerous.isEmpty()) {
+                listOf("All normal level")
+            } else {
+                dangerous.map { it.substringAfterLast('.') }
+            },
+            evidence = permissions
+        )
+    }
+
+    fun analyzeSigning(context: Context, apkPath: String): MacroResult {
+        val entries = entriesOf(apkPath)
+        if (entries.isEmpty()) return unreadableMacro("Signing")
+
+        val metaInf = entries.filter { it.first.startsWith("META-INF/", ignoreCase = true) }
+        val signatureFiles = metaInf.filter {
+            val upper = it.first.uppercase()
+            upper.endsWith(".SF") || upper.endsWith(".RSA") ||
+                upper.endsWith(".DSA") || upper.endsWith(".EC") || upper.endsWith(".MF")
+        }
+        val v1 = signatureFiles.any { it.first.uppercase().endsWith(".SF") }
+        val v2OrNewer = metaInf.any { it.first.equals("META-INF/MANIFEST.MF", true) }
+        val info = archiveInfo(context, apkPath)
+        val debuggable = info?.applicationInfo?.flags?.and(
+            android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE
+        ) != null
+        // ApplicationInfo.FLAG_TESTONLY is not exposed to the SDK, so the value
+        // is spelled out here.
+        val testOnly = info?.applicationInfo?.flags?.and(FLAG_TESTONLY) != null
+
+        return MacroResult(
+            headline = if (debuggable) "Debug Build" else "Release Build",
+            description = "Signature material found: ${signatureFiles.size} META-INF entries. " +
+                "v1 (JAR) signing: ${if (v1) "present" else "absent"}. " +
+                "v2+ signing block: ${if (v2OrNewer) "declared" else "not declared"}. " +
+                "Debuggable: ${if (debuggable) "yes" else "no"}. " +
+                "Test only: ${if (testOnly) "yes" else "no"}.",
+            confidenceText = when {
+                debuggable -> "Debuggable"
+                testOnly -> "Test Only"
+                else -> "Standard Signing"
+            },
+            chips = buildList {
+                add("v1: ${if (v1) "yes" else "no"}")
+                add("v2+: ${if (v2OrNewer) "yes" else "no"}")
+                add("Debuggable: ${if (debuggable) "yes" else "no"}")
+                add("Test only: ${if (testOnly) "yes" else "no"}")
+            },
+            evidence = signatureFiles.map { it.first }
+        )
+    }
+
+    fun analyzeResources(apkPath: String): MacroResult {
+        val entries = entriesOf(apkPath)
+        if (entries.isEmpty()) return unreadableMacro("Resources")
+
+        val arsc = entries.firstOrNull { it.first == "resources.arsc" }?.second ?: 0L
+        val res = entries.filter { it.first.startsWith("res/") }
+        val assets = entries.filter { it.first.startsWith("assets/") }
+        val layouts = res.count { it.first.startsWith("res/layout") }
+        val drawables = res.count { it.first.startsWith("res/drawable") }
+        val xmls = res.count { it.first.startsWith("res/xml") }
+        val dex = entries.filter { it.first.endsWith(".dex", ignoreCase = true) }
+        val largest = entries.sortedByDescending { it.second }.take(10)
+
+        return MacroResult(
+            headline = "${humanSize(arsc)} resource table",
+            description = "resources.arsc holds the compiled resource table. " +
+                "${res.size} compiled resources, ${assets.size} raw assets, " +
+                "${dex.size} DEX files, ${humanSize(dex.sumOf { it.second })} of bytecode.",
+            confidenceText = "Archive Scanned",
+            chips = listOf(
+                "res/: ${res.size}",
+                "assets/: ${assets.size}",
+                "Layouts: $layouts",
+                "Drawables: $drawables",
+                "XML: $xmls",
+                "DEX: ${dex.size}"
+            ),
+            evidence = largest.map { it.first }
+        )
+    }
+
+    fun analyzeCompatibility(context: Context, apkPath: String): MacroResult {
+        val info = archiveInfo(context, apkPath)
+            ?: return unreadableMacro("Compatibility")
+        val appInfo = info.applicationInfo
+        val minSdk = appInfo?.let { AppInfoUtils.getMinSdkVersion(it) } ?: 0
+        val targetSdk = appInfo?.targetSdkVersion ?: 0
+        val features = info.reqFeatures.orEmpty()
+        val densities = densityBuckets(apkPath)
+
+        return MacroResult(
+            headline = "API $minSdk – $targetSdk",
+            description = "The app supports API $minSdk and up, and targets API $targetSdk. " +
+                "${features.size} hardware or software features are declared as required. " +
+                "Density buckets present in res/: ${densities.joinToString(", ")}.",
+            confidenceText = if (minSdk >= 23) "Modern Baseline" else "Legacy Baseline",
+            chips = buildList {
+                add("minSdk: $minSdk")
+                add("targetSdk: $targetSdk")
+                add("Required features: ${features.size}")
+            },
+            evidence = features.map { it.name }
+        )
+    }
+
+    private fun densityBuckets(apkPath: String): List<String> {
+        val buckets = linkedSetOf<String>()
+        entriesOf(apkPath).forEach { (path, _) ->
+            val density = DENSITY_BUCKETS.firstOrNull { path.startsWith("res/$it") }
+            if (density != null) buckets.add(density)
+        }
+        return buckets.toList()
+    }
+
+    private fun unreadableMacro(subject: String) = MacroResult(
+        headline = "Unavailable",
+        description = "The APK file could not be read, so $subject could not be analysed.",
+        confidenceText = "No Data",
+        chips = emptyList(),
+        evidence = emptyList()
+    )
+
+    private fun humanSize(bytes: Long): String = AppInfoUtils.formatFileSize(bytes)
+
+    private const val FLAG_TESTONLY = 0x02000000
+
+    private val DENSITY_BUCKETS = listOf(
+        "drawable-ldpi", "drawable-mdpi", "drawable-hdpi", "drawable-xhdpi",
+        "drawable-xxhdpi", "drawable-xxxhdpi"
+    )
+
+    private val DANGEROUS_PERMISSION_SUFFIXES = setOf(
+        "ACCEPT_HANDOVER", "ACCESS_BACKGROUND_LOCATION", "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION", "ACCESS_MEDIA_LOCATION", "ACTIVITY_RECOGNITION",
+        "ADD_VOICEMAIL", "ANSWER_PHONE_CALLS", "BLUETOOTH_ADVERTISE", "BLUETOOTH_CONNECT",
+        "BLUETOOTH_SCAN", "BODY_SENSORS", "BODY_SENSORS_BACKGROUND", "CALL_PHONE",
+        "CAMERA", "GET_ACCOUNTS", "NEARBY_WIFI_DEVICES", "POST_NOTIFICATIONS",
+        "PROCESS_OUTGOING_CALLS", "READ_CALENDAR", "READ_CALL_LOG", "READ_CONTACTS",
+        "READ_EXTERNAL_STORAGE", "READ_MEDIA_AUDIO", "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO", "READ_PHONE_NUMBERS", "READ_PHONE_STATE", "READ_SMS",
+        "RECEIVE_MMS", "RECEIVE_SMS", "RECEIVE_WAP_PUSH", "RECORD_AUDIO",
+        "SEND_SMS", "USE_BIOMETRIC", "USE_SIP", "UWB_RANGING", "WRITE_CALENDAR",
+        "WRITE_CALL_LOG", "WRITE_CONTACTS", "WRITE_EXTERNAL_STORAGE"
+    )
 }

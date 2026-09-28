@@ -2,10 +2,11 @@ package com.asdk.tools.dexworks
 
 import android.content.Context
 import android.view.LayoutInflater
+import android.view.MenuItem
 import android.view.View
-import android.widget.PopupMenu
 import android.widget.TextView
 import com.asdk.tools.dexworks.databinding.SheetProjectActionsBinding
+import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -15,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.zip.ZipFile
 
 /** One action offered for a project, in both the long-press sheet and the overflow menu. */
@@ -110,17 +112,26 @@ object ProjectActions {
         )
     }
 
-    /** Overflow variant, used from the 3-dot in project options. */
-    fun showMenu(context: Context, anchor: View, onAction: (Int) -> Unit) {
-        val popup = PopupMenu(context, anchor)
+    /**
+     * Overflow variant, used from a toolbar.
+     *
+     * The actions go into the toolbar's own menu so the platform renders the
+     * single Material 3 overflow, anchored to its 3-dot. Showing a second,
+     * framework [PopupMenu] from an always-visible 3-dot item produced a popup
+     * anchored to the whole toolbar, so it floated out of place and was styled
+     * as a plain system popup.
+     */
+    fun installInToolbar(toolbar: MaterialToolbar, onAction: (Int) -> Unit) {
+        toolbar.menu.clear()
         actions.forEach { action ->
-            popup.menu.add(0, action.id, action.id, action.titleRes)
+            toolbar.menu.add(0, action.id, action.id, action.titleRes).apply {
+                setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+            }
         }
-        popup.setOnMenuItemClickListener { item ->
+        toolbar.setOnMenuItemClickListener { item ->
             onAction(item.itemId)
             true
         }
-        popup.show()
     }
 
     fun notImplemented(context: Context, root: View) {
@@ -213,5 +224,75 @@ object ProjectActions {
                 .setPositiveButton(android.R.string.ok, null)
                 .show()
         }
+    }
+
+    /**
+     * Unified entry point for all project actions. Called from both the long-press
+     * sheet in the projects list and the 3-dot overflow in project options.
+     */
+    fun run(
+        actionId: Int,
+        apkPath: String,
+        projectName: String,
+        hasApk: Boolean,
+        context: Context,
+        root: View,
+        projectPath: String = "",
+        onOpen: () -> Unit
+    ) {
+        when (actionId) {
+            ACTION_OPEN -> onOpen()
+            ACTION_APP_DETAILS -> if (hasApk) {
+                AppDetailActivity.start(context, apkPath = apkPath, fromProject = true)
+            } else notImplemented(context, root)
+            ACTION_DECOMPILE -> if (hasApk) startDecompile(context, apkPath, projectName)
+            else notImplemented(context, root)
+            ACTION_BROWSE_APK -> if (hasApk) {
+                context.startActivity(ApkBrowseActivity.createIntent(context, apkPath, projectName))
+            } else notImplemented(context, root)
+            ACTION_MANIFEST -> if (hasApk) {
+                context.startActivity(
+                    ManifestInspectorActivity.createIntent(context, apkPath, projectName, "")
+                )
+            } else notImplemented(context, root)
+            ACTION_ANALYZE -> if (hasApk) {
+                context.startActivity(ApkAnalysisActivity.createIntent(context, apkPath, projectName))
+            } else notImplemented(context, root)
+            ACTION_SAVE_APK -> if (hasApk) {
+                val act = context as? androidx.appcompat.app.AppCompatActivity
+                if (act != null) {
+                    FileSaveHelper.from(act).saveFile(File(apkPath), "project.apk", forcePickLocation = true)
+                } else notImplemented(context, root)
+            } else notImplemented(context, root)
+            ACTION_DELETE -> {
+                val project = ProjectItem(name = projectName, path = projectPath, lastModified = 0, apkPath = apkPath.takeIf { it.isNotBlank() })
+                showDeleteConfirm(context, project, root)
+            }
+        }
+    }
+
+    private fun showDeleteConfirm(context: Context, project: ProjectItem, root: View) {
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.project_delete_title)
+            .setMessage(context.getString(R.string.project_delete_message, project.name))
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.project_delete_confirm) { _, _ ->
+                CoroutineScope(SupervisorJob() + Dispatchers.Main).launch {
+                    val deleted = withContext(Dispatchers.IO) {
+                        ProjectStore.deleteProject(context.applicationContext, project.path)
+                    }
+                    runCatching {
+                        if (deleted) {
+                            Snackbar.make(root, context.getString(R.string.project_deleted, project.name), Snackbar.LENGTH_SHORT).show()
+                            if (context is androidx.appcompat.app.AppCompatActivity && context !is MainActivity) {
+                                context.finish()
+                            }
+                        } else {
+                            Snackbar.make(root, R.string.project_delete_failed, Snackbar.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+            .show()
     }
 }

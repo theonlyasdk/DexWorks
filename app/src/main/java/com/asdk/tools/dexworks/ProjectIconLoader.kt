@@ -36,11 +36,15 @@ class ProjectIconLoader(maxEntries: Int = 48) {
         placeholderIconRes: Int,
         placeholderTint: ColorStateList?
     ) {
+        // The tag is set on every path, including the early return below. Setting
+        // it only when a decode starts let a row recycled into a catalogue-icon
+        // project keep the previous project's tag, so the in-flight decode still
+        // matched it and painted the wrong APK icon over the new one.
+        imageView.setTag(R.id.tag_app_icon_package, apkPath)
         if (apkPath.isNullOrBlank()) {
             showPlaceholder(imageView, placeholderIconRes, placeholderTint)
             return
         }
-        imageView.setTag(R.id.tag_app_icon_package, apkPath)
 
         cache.get(apkPath)?.let {
             imageView.setImageTintList(null)
