@@ -581,7 +581,7 @@
                             android:stepSize="10"
                             android:value="200"
                             android:valueFrom="10"
-                            android:valueTo="2000" />
+                            android:valueTo="1000" />
 
                         <TextView
                             android:id="@+id/label_single_amplitude"

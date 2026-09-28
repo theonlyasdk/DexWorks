@@ -10,6 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         app:navigationIcon="?attr/homeAsUpIndicator"
+        app:subtitleCentered="false"
         app:title="@string/title_project_options" />
 
     <androidx.core.widget.NestedScrollView
@@ -51,7 +52,7 @@
                         android:layout_width="56dp"
                         android:layout_height="56dp"
                         android:contentDescription="@null"
-                        android:scaleType="centerInside"
+                        android:scaleType="fitXY"
                         android:src="@drawable/ic_nav_browse"
                         app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium"
                         app:tint="?attr/colorPrimary" />
@@ -66,8 +67,9 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-light"
                             android:text="@string/project_options_app_details"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
+                            android:textAppearance="@style/TextAppearance.AppCompat.Large"
                             android:textColor="?attr/colorOnSurface" />
 
                         <TextView
@@ -106,7 +108,7 @@
                         android:layout_width="56dp"
                         android:layout_height="56dp"
                         android:contentDescription="@null"
-                        android:scaleType="centerInside"
+                        android:scaleType="fitXY"
                         android:src="@drawable/ic_tool_decompile"
                         app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium"
                         app:tint="?attr/colorPrimary" />
@@ -121,8 +123,9 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-light"
                             android:text="@string/project_options_decompile"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
+                            android:textAppearance="@style/TextAppearance.AppCompat.Large"
                             android:textColor="?attr/colorOnSurface" />
 
                         <TextView
@@ -161,7 +164,7 @@
                         android:layout_width="56dp"
                         android:layout_height="56dp"
                         android:contentDescription="@null"
-                        android:scaleType="centerInside"
+                        android:scaleType="fitXY"
                         android:src="@drawable/ic_file_open"
                         app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium"
                         app:tint="?attr/colorPrimary" />
@@ -176,8 +179,9 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-light"
                             android:text="@string/project_options_apk_browse"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
+                            android:textAppearance="@style/TextAppearance.AppCompat.Large"
                             android:textColor="?attr/colorOnSurface" />
 
                         <TextView
@@ -215,7 +219,7 @@
                         android:layout_width="56dp"
                         android:layout_height="56dp"
                         android:contentDescription="@null"
-                        android:scaleType="centerInside"
+                        android:scaleType="fitXY"
                         android:src="@drawable/ic_tool_manifest"
                         app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium"
                         app:tint="?attr/colorPrimary" />
@@ -230,8 +234,9 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-light"
                             android:text="@string/project_options_manifest_viewer"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
+                            android:textAppearance="@style/TextAppearance.AppCompat.Large"
                             android:textColor="?attr/colorOnSurface" />
 
                         <TextView

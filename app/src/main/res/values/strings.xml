@@ -209,10 +209,13 @@
     <string name="filter_system">System (%d)</string>
     <string name="action_pick_apk">Open APK File</string>
     <string name="action_open_app">Open</string>
+    <string name="action_open_app_full">Open App</string>
     <string name="action_app_info">System Info</string>
+    <string name="action_system_details">System Details</string>
     <string name="action_copy_apk_path">Copy APK path</string>
     <string name="action_copy_signature">Copy signature</string>
     <string name="action_extract_apk">Share APK</string>
+    <string name="action_share_apk">Share APK</string>
     <string name="badge_system_app">System App</string>
     <string name="badge_user_app">User App</string>
     <string name="badge_external_apk">External APK</string>
@@ -248,7 +251,10 @@
     <string name="dialog_sdk_title">Android version</string>
     <string name="dialog_sdk_message">Version: %1$s\nName: %2$s\nCodename: %3$s</string>
     <string name="action_save_apk_to">Save APK to…</string>
+    <string name="action_save_apk">Save APK</string>
+    <string name="action_save_apk_ellipsis">Save APK…</string>
     <string name="action_import_as_project">Import as project…</string>
+    <string name="action_import_short">Import…</string>
     <string name="dialog_remember_location_title">Remember this location?</string>
     <string name="dialog_remember_location_message">Set this directory as your default APK export location?</string>
     <string name="action_remember">Remember</string>
@@ -619,6 +625,9 @@
 
     <!-- Decompile Pipeline -->
     <string name="action_re_decompile">Re-decompile</string>
+    <string name="action_export_zip">Export as ZIP</string>
+    <string name="decompile_exporting_zip">Creating ZIP archive…</string>
+    <string name="decompile_export_zip_failed">Failed to export ZIP file</string>
     <string name="decompile_target_badge">Target DEX</string>
     <string name="decompile_backend_baksmali">Baksmali</string>
     <string name="decompile_backend_cfr">CFR</string>

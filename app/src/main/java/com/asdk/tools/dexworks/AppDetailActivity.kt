@@ -75,7 +75,7 @@ class AppDetailActivity : AppCompatActivity() {
         return fragment?.apkPathForImport().orEmpty()
     }
 
-    private fun startProjectImport() {
+    fun startProjectImport() {
         val fragment =
             supportFragmentManager.findFragmentById(R.id.detail_container) as? AppDetailFragment
                 ?: return
@@ -125,21 +125,10 @@ class AppDetailActivity : AppCompatActivity() {
 
     override fun onPrepareOptionsMenu(menu: android.view.Menu): Boolean {
         val fragment = supportFragmentManager.findFragmentById(R.id.detail_container) as? AppDetailFragment
-        // Opened from inside a project, the app is already a project, so offering
-        // "import as project" would just create a duplicate and a cycle.
-        val fromProject = intent.getBooleanExtra(EXTRA_FROM_PROJECT, false)
         if (fragment != null) {
             val hasApkPath = fragment.hasApkPath()
-            menu.findItem(R.id.action_save_apk_to)?.isVisible = hasApkPath
             menu.findItem(R.id.action_inspect_manifest)?.isVisible = hasApkPath
             menu.findItem(R.id.action_inspect_activities)?.isVisible = hasApkPath
-            menu.findItem(R.id.action_import_as_project)?.isVisible =
-                hasApkPath && !fromProject
-            // Uninstall only makes sense for a real installed package reached from
-            // the app list, not for an APK opened out of a project.
-            menu.findItem(R.id.action_uninstall)?.isVisible =
-                !fromProject && fragment.isInstalledPackage()
-            menu.findItem(R.id.action_analyze)?.isVisible = hasApkPath
         }
         return super.onPrepareOptionsMenu(menu)
     }
@@ -147,26 +136,6 @@ class AppDetailActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         if (item.itemId == android.R.id.home) {
             return onSupportNavigateUp()
-        }
-        if (item.itemId == R.id.action_import_as_project) {
-            // Handled here rather than in the fragment, so the wizard result can be
-            // used to open the new project.
-            startProjectImport()
-            return true
-        }
-        if (item.itemId == R.id.action_analyze) {
-            // The APK analysis entry point now lives in the app details overflow.
-            val apk = fragmentApkPath()
-            if (apk.isNotBlank()) {
-                startActivity(
-                    ApkAnalysisActivity.createIntent(
-                        this,
-                        apk,
-                        intent.getStringExtra(EXTRA_PACKAGE_NAME).orEmpty()
-                    )
-                )
-            }
-            return true
         }
         if (item.itemId == R.id.action_export_device_summary) {
             startActivity(DeviceSummaryActivity.createIntent(this))

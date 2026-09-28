@@ -2,29 +2,12 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/action_save_apk_to"
-        android:title="@string/action_save_apk_to"
-        app:showAsAction="never" />
-    <item
         android:id="@+id/action_inspect_manifest"
         android:title="@string/action_inspect_manifest"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_inspect_activities"
         android:title="@string/action_inspect_activities"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/action_import_as_project"
-        android:title="@string/action_import_as_project"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/action_uninstall"
-        android:title="@string/action_uninstall_app"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/action_analyze"
-        android:icon="@drawable/ic_analytics"
-        android:title="@string/apk_browse_analyze"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_export_device_summary"

@@ -1,0 +1,21 @@
+================== Finished ======================
+
+bump version number then deploy optimised pruned release APK to github as a new release
+
+make Haptics and Vibration lap open only when long pressing about DexWorks for 5 seconds. Simply tapping should show a toastmessage - Designed with <heart emoji> by theonlyasdk<newline>Version <versionstringfrompackagedetails>
+
+Update description of setting preferences:
+Notifications (Title) - "Notify me when background tasks are happening"
+
+Update title of Setting Preferences:
+1.
+Remember save folder -> "Default Save Location"
+and description of it should be "Exported APK files will be saved here"
+
+2.
+Hex page size -> HexViewer Single Page Size
+Maximum image size -> ImageViewer Max Image Size
+
+Option in decompiled files view to export decompiled files as zip file
+
+======================= TODO ======================

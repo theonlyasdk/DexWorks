@@ -86,42 +86,339 @@
 
                 </LinearLayout>
 
-                <!-- Action buttons -->
-                <LinearLayout
+                <!-- Action cards -->
+                <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:orientation="horizontal">
+                    android:clipToPadding="false"
+                    android:scrollbars="none"
+                    android:overScrollMode="never"
+                    android:requiresFadingEdge="horizontal"
+                    android:fadingEdgeLength="24dp">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_open_app"
-                        android:layout_width="0dp"
+                    <LinearLayout
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginEnd="6dp"
-                        android:text="@string/action_open_app"
-                        app:icon="@drawable/ic_launch" />
+                        android:orientation="horizontal">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_app_info"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="6dp"
-                        android:text="@string/action_app_info"
-                        app:icon="@drawable/ic_settings" />
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/btn_open_app"
+                            style="?attr/materialCardViewFilledStyle"
+                            android:layout_width="140dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="10dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="0dp"
+                            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="?attr/colorOutlineVariant">
 
-                </LinearLayout>
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="16dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_share_apk"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/action_extract_apk"
-                    app:icon="@drawable/ic_tool_extract" />
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_launch"
+                                    app:tint="?attr/colorOnSurface"
+                                    android:contentDescription="@null" />
+
+                                <TextView
+                                    android:id="@+id/title_open_app"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="16dp"
+                                    android:text="@string/action_open_app"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:textSize="18sp"
+                                    android:fontFamily="sans-serif-light"
+                                    android:singleLine="true"
+                                    android:ellipsize="marquee"
+                                    android:marqueeRepeatLimit="marquee_forever"
+                                    android:scrollHorizontally="true" />
+
+                            </LinearLayout>
+
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/btn_app_info"
+                            style="?attr/materialCardViewFilledStyle"
+                            android:layout_width="140dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="10dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="0dp"
+                            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="?attr/colorOutlineVariant">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="16dp">
+
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_settings"
+                                    app:tint="?attr/colorOnSurface"
+                                    android:contentDescription="@null" />
+
+                                <TextView
+                                    android:id="@+id/title_app_info"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="16dp"
+                                    android:text="@string/action_app_info"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:textSize="18sp"
+                                    android:fontFamily="sans-serif-light"
+                                    android:singleLine="true"
+                                    android:ellipsize="marquee"
+                                    android:marqueeRepeatLimit="marquee_forever"
+                                    android:scrollHorizontally="true" />
+
+                            </LinearLayout>
+
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/btn_share_apk"
+                            style="?attr/materialCardViewFilledStyle"
+                            android:layout_width="140dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="10dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="0dp"
+                            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="?attr/colorOutlineVariant">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="16dp">
+
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_tool_extract"
+                                    app:tint="?attr/colorOnSurface"
+                                    android:contentDescription="@null" />
+
+                                <TextView
+                                    android:id="@+id/title_share_apk"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="16dp"
+                                    android:text="@string/action_extract_apk"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:textSize="18sp"
+                                    android:fontFamily="sans-serif-light"
+                                    android:singleLine="true"
+                                    android:ellipsize="marquee"
+                                    android:marqueeRepeatLimit="marquee_forever"
+                                    android:scrollHorizontally="true" />
+
+                            </LinearLayout>
+
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/btn_save_apk"
+                            style="?attr/materialCardViewFilledStyle"
+                            android:layout_width="140dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="10dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="0dp"
+                            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="?attr/colorOutlineVariant">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="16dp">
+
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_save_to"
+                                    app:tint="?attr/colorOnSurface"
+                                    android:contentDescription="@null" />
+
+                                <TextView
+                                    android:id="@+id/title_save_apk"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="16dp"
+                                    android:text="@string/action_save_apk"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:textSize="18sp"
+                                    android:fontFamily="sans-serif-light"
+                                    android:singleLine="true"
+                                    android:ellipsize="marquee"
+                                    android:marqueeRepeatLimit="marquee_forever"
+                                    android:scrollHorizontally="true" />
+
+                            </LinearLayout>
+
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/btn_analyze_apk"
+                            style="?attr/materialCardViewFilledStyle"
+                            android:layout_width="140dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="10dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="0dp"
+                            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="?attr/colorOutlineVariant">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="16dp">
+
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_analytics"
+                                    app:tint="?attr/colorOnSurface"
+                                    android:contentDescription="@null" />
+
+                                <TextView
+                                    android:id="@+id/title_analyze_apk"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="16dp"
+                                    android:text="@string/apk_browse_analyze"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:textSize="18sp"
+                                    android:fontFamily="sans-serif-light"
+                                    android:singleLine="true"
+                                    android:ellipsize="marquee"
+                                    android:marqueeRepeatLimit="marquee_forever"
+                                    android:scrollHorizontally="true" />
+
+                            </LinearLayout>
+
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/btn_import_project"
+                            style="?attr/materialCardViewFilledStyle"
+                            android:layout_width="140dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="10dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="0dp"
+                            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="?attr/colorOutlineVariant">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="16dp">
+
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_folder_filled"
+                                    app:tint="?attr/colorOnSurface"
+                                    android:contentDescription="@null" />
+
+                                <TextView
+                                    android:id="@+id/title_import_project"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="16dp"
+                                    android:text="@string/action_import_short"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:textSize="18sp"
+                                    android:fontFamily="sans-serif-light"
+                                    android:singleLine="true"
+                                    android:ellipsize="marquee"
+                                    android:marqueeRepeatLimit="marquee_forever"
+                                    android:scrollHorizontally="true" />
+
+                            </LinearLayout>
+
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/btn_uninstall_app"
+                            style="?attr/materialCardViewFilledStyle"
+                            android:layout_width="140dp"
+                            android:layout_height="wrap_content"
+                            android:clickable="true"
+                            android:focusable="true"
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="0dp"
+                            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="?attr/colorOutlineVariant">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="16dp">
+
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_delete"
+                                    app:tint="?attr/colorOnSurface"
+                                    android:contentDescription="@null" />
+
+                                <TextView
+                                    android:id="@+id/title_uninstall_app"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="16dp"
+                                    android:text="@string/action_uninstall_app"
+                                    android:textColor="?attr/colorOnSurface"
+                                    android:textSize="18sp"
+                                    android:fontFamily="sans-serif-light"
+                                    android:singleLine="true"
+                                    android:ellipsize="marquee"
+                                    android:marqueeRepeatLimit="marquee_forever"
+                                    android:scrollHorizontally="true" />
+
+                            </LinearLayout>
+
+                        </com.google.android.material.card.MaterialCardView>
+
+                    </LinearLayout>
+
+                </HorizontalScrollView>
 
             </LinearLayout>
 

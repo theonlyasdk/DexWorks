@@ -41,8 +41,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.BufferedReader
+import java.io.BufferedOutputStream
 import java.io.File
+import java.io.FileOutputStream
+import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
 
 internal data class ApkEntry(
     val path: String,
@@ -399,8 +403,12 @@ class ApkBrowseActivity : AppCompatActivity() {
         sourceDexEntry = intent.getStringExtra(EXTRA_SOURCE_DEX_ENTRY).orEmpty()
         binding.toolbar.subtitle = projectName
         binding.toolbar.inflateMenu(R.menu.menu_apk_browse)
+        val isDecompiled = sourceApkPath.isNotBlank() && sourceDexEntry.isNotBlank()
         binding.toolbar.menu.findItem(R.id.action_re_decompile)?.let { item ->
-            item.isVisible = sourceApkPath.isNotBlank() && sourceDexEntry.isNotBlank()
+            item.isVisible = isDecompiled
+        }
+        binding.toolbar.menu.findItem(R.id.action_export_decompiled_zip)?.let { item ->
+            item.isVisible = isDecompiled
         }
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -413,6 +421,10 @@ class ApkBrowseActivity : AppCompatActivity() {
                             projectName = projectName
                         )
                     )
+                    true
+                }
+                R.id.action_export_decompiled_zip -> {
+                    exportDecompiledZip()
                     true
                 }
                 R.id.action_sort_name -> {
@@ -950,6 +962,61 @@ class ApkBrowseActivity : AppCompatActivity() {
         val targetFile = ApkEntryFiles.materialize(applicationContext, apkPath, entry.path)
             ?: return null
         return ApkEntryFiles.uriFor(applicationContext, targetFile)
+    }
+
+    private fun exportDecompiledZip() {
+        val decompiledDir = File(apkPath)
+        if (!decompiledDir.exists() || !decompiledDir.isDirectory) {
+            Snackbar.make(binding.root, R.string.decompile_export_zip_failed, Snackbar.LENGTH_SHORT).show()
+            return
+        }
+
+        val apkBaseName = File(sourceApkPath).nameWithoutExtension.ifBlank { "app" }
+        val dexBaseName = File(sourceDexEntry).nameWithoutExtension.ifBlank { "dex" }
+        val zipFileName = "${apkBaseName}_${dexBaseName}_decompiled.zip"
+
+        val snackbar = Snackbar.make(binding.root, R.string.decompile_exporting_zip, Snackbar.LENGTH_INDEFINITE)
+        snackbar.show()
+
+        lifecycleScope.launch {
+            val zipFile = withContext(Dispatchers.IO) {
+                try {
+                    val exportDir = File(cacheDir, "exports").apply { mkdirs() }
+                    val targetZip = File(exportDir, zipFileName)
+                    if (targetZip.exists()) {
+                        targetZip.delete()
+                    }
+                    ZipOutputStream(BufferedOutputStream(FileOutputStream(targetZip))).use { zos ->
+                        val basePrefixLength = decompiledDir.absolutePath.length + 1
+                        decompiledDir.walkTopDown().forEach { file ->
+                            if (file.isFile) {
+                                val relativePath = file.absolutePath.substring(basePrefixLength).replace('\\', '/')
+                                val entry = ZipEntry(relativePath)
+                                entry.time = file.lastModified()
+                                zos.putNextEntry(entry)
+                                file.inputStream().use { input ->
+                                    input.copyTo(zos)
+                                }
+                                zos.closeEntry()
+                            }
+                        }
+                    }
+                    targetZip
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+            snackbar.dismiss()
+
+            if (zipFile != null && zipFile.exists() && zipFile.length() > 0) {
+                fileSaveHelper.saveFile(zipFile, zipFileName)
+            } else {
+                Snackbar.make(binding.root, R.string.decompile_export_zip_failed, Snackbar.LENGTH_LONG).show()
+            }
+        }
     }
 
     private class ApkEntryAdapter(

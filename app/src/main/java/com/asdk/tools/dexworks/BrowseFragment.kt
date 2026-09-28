@@ -36,6 +36,7 @@ import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.core.content.FileProvider
 import java.io.File
 
 class BrowseFragment : Fragment() {
@@ -605,6 +606,9 @@ class BrowseFragment : Fragment() {
                 onSaveApkToClick = { app ->
                     saveApk(app)
                 },
+                onShareApkClick = { app ->
+                    shareApk(app)
+                },
                 iconLoader = iconLoader
             )
         }
@@ -617,6 +621,44 @@ class BrowseFragment : Fragment() {
 
     fun saveApk(app: AppItem) {
         fileSaveHelper.saveApk(app)
+    }
+
+    fun shareApk(app: AppItem) {
+        val context = context ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val uri = withContext(Dispatchers.IO) {
+                try {
+                    val sourceFile = File(app.sourceDir)
+                    if (!sourceFile.exists()) return@withContext null
+
+                    val shareDir = File(context.cacheDir, "shared_apks")
+                    if (!shareDir.exists()) shareDir.mkdirs()
+
+                    val targetName = app.name.ifBlank { app.packageName }.ifBlank { "app" }
+                    val sanitizedAppName = targetName.replace(SanitizedNames.UNSAFE_CHARS, "_")
+                    val versionName = app.versionName.ifBlank { "1.0" }
+                    val fileName = "${sanitizedAppName}_${versionName}.apk"
+                    val targetFile = File(shareDir, fileName)
+
+                    sourceFile.copyTo(targetFile, overwrite = true)
+                    FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", targetFile)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+            if (uri != null && isAdded) {
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/vnd.android.package-archive"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, "${app.name} APK")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                startActivity(Intent.createChooser(shareIntent, getString(R.string.action_share_apk)))
+            } else if (isAdded) {
+                Snackbar.make(binding.root, R.string.toast_apk_save_failed, Snackbar.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun openAppDetails(packageName: String) {
@@ -681,6 +723,7 @@ class BrowseFragment : Fragment() {
         private val onItemLongClick: (AppItem, Int) -> Unit = { _, _ -> },
         private val onAvatarClick: (AppItem) -> Unit = {},
         private val onSaveApkToClick: (AppItem) -> Unit,
+        private val onShareApkClick: (AppItem) -> Unit = {},
         private val iconLoader: AppIconLoader = AppIconLoader()
     ) : ListAdapter<AppItem, AppAdapter.ViewHolder>(DIFF) {
 
@@ -834,18 +877,15 @@ class BrowseFragment : Fragment() {
 
             holder.menuButton.setOnClickListener { v ->
                 val popup = PopupMenu(v.context, v)
-                popup.menu.add(0, 1, 0, R.string.title_app_detail)
-                popup.menu.add(0, 2, 1, R.string.action_open_app)
-                popup.menu.add(0, 3, 2, R.string.action_app_info)
-                popup.menu.add(0, 4, 3, R.string.action_save_apk_to)
-                popup.menu.add(0, 5, 4, R.string.action_import_as_project)
+                popup.menu.add(0, 1, 0, R.string.action_open_app_full)
+                popup.menu.add(0, 2, 1, R.string.title_app_detail)
+                popup.menu.add(0, 3, 2, R.string.action_system_details)
+                popup.menu.add(0, 4, 3, R.string.action_save_apk_ellipsis)
+                popup.menu.add(0, 5, 4, R.string.action_share_apk)
+                popup.menu.add(0, 6, 5, R.string.action_import_as_project)
                 popup.setOnMenuItemClickListener { menuItem ->
                     when (menuItem.itemId) {
                         1 -> {
-                            onItemClick(item)
-                            true
-                        }
-                        2 -> {
                             val pm = v.context.packageManager
                             val intent = pm.getLaunchIntentForPackage(item.packageName)
                             if (intent != null) {
@@ -857,6 +897,10 @@ class BrowseFragment : Fragment() {
                                     Snackbar.LENGTH_SHORT
                                 ).show()
                             }
+                            true
+                        }
+                        2 -> {
+                            onItemClick(item)
                             true
                         }
                         3 -> {
@@ -871,6 +915,10 @@ class BrowseFragment : Fragment() {
                             true
                         }
                         5 -> {
+                            onShareApkClick(item)
+                            true
+                        }
+                        6 -> {
                             v.context.startActivity(
                                 ProjectWizardActivity.createIntent(
                                     context = v.context,

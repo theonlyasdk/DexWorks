@@ -432,6 +432,49 @@ class AppDetailFragment : Fragment() {
             }
         }
 
+        // Action cards: Save APK, Analyze, Import, Uninstall
+        val hasApk = actualApkPath.isNotBlank()
+        val fromProject = activity?.intent?.getBooleanExtra(AppDetailActivity.EXTRA_FROM_PROJECT, false) ?: false
+        val isInstalled = !fromProject && isInstalledPackage()
+
+        binding.btnSaveApk.isVisible = hasApk
+        binding.btnSaveApk.setOnClickListener {
+            fileSaveHelper.saveApk(pkg, actualApkPath, forcePickLocation = false)
+        }
+
+        binding.btnAnalyzeApk.isVisible = hasApk
+        binding.btnAnalyzeApk.setOnClickListener {
+            if (actualApkPath.isNotBlank()) {
+                startActivity(
+                    ApkAnalysisActivity.createIntent(
+                        requireContext(),
+                        actualApkPath,
+                        pkg.packageName.orEmpty()
+                    )
+                )
+            }
+        }
+
+        binding.btnImportProject.isVisible = hasApk && !fromProject
+        binding.btnImportProject.setOnClickListener {
+            (activity as? AppDetailActivity)?.startProjectImport() ?: importAsProject()
+        }
+
+        binding.btnUninstallApp.isVisible = isInstalled
+        binding.btnUninstallApp.setOnClickListener {
+            confirmUninstall()
+        }
+
+        listOf(
+            binding.titleOpenApp,
+            binding.titleAppInfo,
+            binding.titleShareApk,
+            binding.titleSaveApk,
+            binding.titleAnalyzeApk,
+            binding.titleImportProject,
+            binding.titleUninstallApp
+        ).forEach { it.isSelected = true }
+
         // Version & Codes
         binding.textVersionName.text = pkg.versionName ?: "N/A"
         binding.textVersionCode.text = AppInfoUtils.getVersionCode(pkg).toString()
@@ -566,7 +609,7 @@ class AppDetailFragment : Fragment() {
                 dialogBinding.textUncompressedAndFiles.text = "${getString(
                     R.string.label_apk_uncompressed_size,
                     AppInfoUtils.formatFileSize(breakdown.totalUncompressedSize)
-                )} â€¢ ${getString(R.string.label_apk_file_count, breakdown.totalFiles)}"
+                )} / ${getString(R.string.label_apk_file_count, breakdown.totalFiles)}"
 
                 val slices = breakdown.categories.map {
                     CylinderChartView.Slice(
@@ -589,7 +632,7 @@ class AppDetailFragment : Fragment() {
                     itemBinding.textCategoryPercentage.text = String.format(java.util.Locale.getDefault(), "%.1f%%", item.percentage)
                     itemBinding.progressCategory.setIndicatorColor(item.color)
                     itemBinding.progressCategory.progress = item.percentage.toInt().coerceIn(0, 100)
-                    itemBinding.textCategorySize.text = "${AppInfoUtils.formatFileSize(item.compressedSize)} â€¢ ${getString(R.string.label_apk_file_count, item.fileCount)}"
+                    itemBinding.textCategorySize.text = "${AppInfoUtils.formatFileSize(item.compressedSize)} / ${getString(R.string.label_apk_file_count, item.fileCount)}"
                     itemBinding.textCategoryUncompressed.text = getString(R.string.label_apk_original_size, AppInfoUtils.formatFileSize(item.uncompressedSize))
 
                     dialogBinding.layoutCategoriesContainer.addView(itemBinding.root)
@@ -614,24 +657,12 @@ class AppDetailFragment : Fragment() {
     fun onMenuAction(itemId: Int): Boolean {
         val pkg = packageInfo ?: return false
         when (itemId) {
-            R.id.action_save_apk_to -> {
-                fileSaveHelper.saveApk(pkg, actualApkPath, forcePickLocation = false)
-                return true
-            }
             R.id.action_inspect_manifest -> {
                 openInspector(ManifestInspectorActivity::createIntent)
                 return true
             }
             R.id.action_inspect_activities -> {
                 openInspector(ActivityInspectorActivity::createIntent)
-                return true
-            }
-            R.id.action_import_as_project -> {
-                importAsProject()
-                return true
-            }
-            R.id.action_uninstall -> {
-                confirmUninstall()
                 return true
             }
         }
