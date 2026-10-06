@@ -102,9 +102,6 @@ class PreferenceFragment : PreferenceFragmentCompat() {
                     Toast.LENGTH_SHORT
                 ).show()
             }
-            preference.onLongPress5Seconds = {
-                startActivity(Intent(requireContext(), VibrationTestActivity::class.java))
-            }
         }
     }
 
