@@ -1,0 +1,9 @@
+DexWorks is an on-device package lab. No desktop computer needed.
+
+Browse installed apps and APK files. See the inside of an app: manifest, components, permissions, signatures, resources, and native libraries.
+
+Extract APKs, splits, and embedded files. Decompile DEX into readable source. Disassemble DEX into Smali. Search classes and methods.
+
+Built for developers, security researchers, QA testers, and anyone curious about what is inside an app.
+
+DexWorks is free and open source. It works fully offline, on your phone.

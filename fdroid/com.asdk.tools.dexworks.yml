@@ -1,0 +1,35 @@
+Categories:
+  - Development
+
+License: MIT
+AuthorName: theonlyasdk
+SourceCode: https://github.com/theonlyasdk/DexWorks
+IssueTracker: https://github.com/theonlyasdk/DexWorks/issues
+Changelog: https://github.com/theonlyasdk/DexWorks/releases
+
+AutoName: DexWorks
+Summary: Inspect APKs on-device: manifest, DEX code, files.
+Description: |-
+  DexWorks is an on-device package lab. No desktop computer needed.
+
+  Browse installed apps and APK files. See the inside of an app: manifest,
+  components, permissions, signatures, resources, and native libraries.
+
+  Extract APKs, splits, and embedded files. Decompile DEX into readable source.
+  Disassemble DEX into Smali. Search classes and methods.
+
+RepoType: git
+Repo: https://github.com/theonlyasdk/DexWorks.git
+
+Builds:
+  - versionName: 1.2.0
+    versionCode: 3
+    commit: v1.2.0
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version v%v
+UpdateCheckMode: Tags
+CurrentVersion: 1.2.0
+CurrentVersionCode: 3

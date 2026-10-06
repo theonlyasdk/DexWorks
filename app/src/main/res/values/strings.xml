@@ -572,15 +572,6 @@
     <string name="vibration_loop_7_title">Preset 7: Breathing Ramp</string>
     <string name="vibration_loop_7_desc">0.5 Hz slow triangle wave breathing swell</string>
 
-    <!-- Voice Responsive Vibration -->
-    <string name="vibration_voice_title">Voice Responsive Vibration</string>
-    <string name="vibration_voice_desc">Real-time tactile response driven by live microphone audio</string>
-    <string name="vibration_voice_start">Start Listening</string>
-    <string name="vibration_voice_stop">Stop Listening</string>
-    <string name="vibration_voice_sensitivity">Sensitivity: %1$dx</string>
-    <string name="vibration_voice_input_level">Live Input Level: %1$d%%</string>
-    <string name="vibration_voice_permission_denied">Microphone permission is required to use voice responsive vibration</string>
-
     <string name="vibration_about_hint">Opens the vibration tester</string>
 
     <!-- APK Analysis -->

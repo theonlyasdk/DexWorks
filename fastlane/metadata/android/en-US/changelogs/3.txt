@@ -1,0 +1,7 @@
+See what is inside your apps, on your phone.
+
+- Browse installed apps and APK files
+- View manifest, components, permissions, and signatures
+- Extract APKs, splits, and files
+- Decompile DEX to source, disassemble to Smali
+- Search classes and methods

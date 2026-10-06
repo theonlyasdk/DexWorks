@@ -1,22 +1,12 @@
 package com.asdk.tools.dexworks
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.media.AudioFormat
-import android.media.AudioRecord
-import android.media.MediaRecorder
-import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.transition.ChangeBounds
@@ -34,10 +24,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.sin
-import kotlin.math.sqrt
 
 class VibrationTestActivity : AppCompatActivity() {
 
@@ -64,21 +52,6 @@ class VibrationTestActivity : AppCompatActivity() {
     private var isLoopingMode: Boolean = false
     private var activePresetTitleRes: Int? = null
     private val presetBindings = mutableListOf<Pair<PresetItem, ItemVibrationPresetBinding>>()
-
-    private var isVoiceListening: Boolean = false
-    private var audioRecord: AudioRecord? = null
-    private var voiceListeningJob: Job? = null
-    private var voiceSensitivity: Int = 3
-
-    private val requestAudioPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            startVoiceListening()
-        } else {
-            Toast.makeText(this, R.string.vibration_voice_permission_denied, Toast.LENGTH_SHORT).show()
-        }
-    }
 
     private var currentMode: WaveformMode = WaveformMode.DISCRETE
     private val discretePoints = mutableListOf<EditablePoint>()
@@ -174,7 +147,6 @@ class VibrationTestActivity : AppCompatActivity() {
         wirePlaybackButtons()
         wireSingle()
         wireTests()
-        wireVoiceResponsive()
 
         setPlaybackUiState(playing = false, looping = false)
         updateWaveformGraphAndPreview()
@@ -1127,149 +1099,6 @@ class VibrationTestActivity : AppCompatActivity() {
         populatePresetGroup(binding.containerLoopingPresets, loopingRhythms)
     }
 
-    private fun wireVoiceResponsive() {
-        binding.sliderVoiceSensitivity.addOnChangeListener { _, value, _ ->
-            voiceSensitivity = value.toInt()
-            binding.labelVoiceSensitivity.text =
-                getString(R.string.vibration_voice_sensitivity, voiceSensitivity)
-        }
-        binding.labelVoiceSensitivity.text =
-            getString(R.string.vibration_voice_sensitivity, binding.sliderVoiceSensitivity.value.toInt())
-        binding.labelVoiceInputLevel.text =
-            getString(R.string.vibration_voice_input_level, 0)
-
-        binding.btnVoiceListen.setOnClickListener {
-            if (isVoiceListening) {
-                stopVoiceListening()
-            } else {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                    == PackageManager.PERMISSION_GRANTED
-                ) {
-                    startVoiceListening()
-                } else {
-                    requestAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                }
-            }
-        }
-    }
-
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    private fun startVoiceListening() {
-        activePlaybackJob?.cancel()
-        activePlaybackJob = null
-        currentActiveWaveform = null
-        pendingHapticDispatch?.let { hapticHandler.removeCallbacks(it) }
-        pendingHapticDispatch = null
-        Haptics.cancel(vibrator)
-        activePresetTitleRes = null
-        setPlaybackUiState(playing = false, looping = false)
-
-        val sampleRate = 44100
-        val channelConfig = AudioFormat.CHANNEL_IN_MONO
-        val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-        val minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
-        val bufferSize = minBufferSize.coerceAtLeast(2048)
-
-        try {
-            val record = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                sampleRate,
-                channelConfig,
-                audioFormat,
-                bufferSize
-            )
-            if (record.state != AudioRecord.STATE_INITIALIZED) {
-                record.release()
-                Toast.makeText(this, R.string.vibration_voice_permission_denied, Toast.LENGTH_SHORT).show()
-                return
-            }
-            record.startRecording()
-            audioRecord = record
-            isVoiceListening = true
-
-            val colorError = MaterialColors.getColor(binding.root, androidx.appcompat.R.attr.colorError, Color.parseColor("#BA1A1A"))
-            val colorOnError = MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorOnError, Color.WHITE)
-            binding.btnVoiceListen.setText(R.string.vibration_voice_stop)
-            binding.btnVoiceListen.backgroundTintList = ColorStateList.valueOf(colorError)
-            binding.btnVoiceListen.setTextColor(colorOnError)
-
-            voiceListeningJob = lifecycleScope.launch(Dispatchers.Default) {
-                val audioBuffer = ShortArray(1024)
-                var lastVibeTime = 0L
-
-                while (isActive && isVoiceListening) {
-                    val read = record.read(audioBuffer, 0, audioBuffer.size)
-                    if (read > 0) {
-                        var sumSq = 0.0
-                        for (i in 0 until read) {
-                            val sample = audioBuffer[i].toDouble()
-                            sumSq += sample * sample
-                        }
-                        val rms = sqrt(sumSq / read)
-                        val sensitivityFactor = voiceSensitivity * 0.5
-                        val rawNormalized = (rms / 6000.0) * sensitivityFactor
-                        val level = (rawNormalized * 100).toInt().coerceIn(0, 100)
-
-                        val now = System.currentTimeMillis()
-                        val targetAmp = if (hasAmplitude) {
-                            ((level / 100f) * 255).toInt().coerceIn(40, 255)
-                        } else {
-                            255
-                        }
-                        val targetDurationMs = (15L + (level / 100f * 185f).toLong()).coerceIn(15L, 200L)
-                        val minInterval = (targetDurationMs + 20L).coerceAtLeast(40L)
-
-                        if (level > 8 && now - lastVibeTime >= minInterval) {
-                            lastVibeTime = now
-                            Haptics.playOneShot(vibrator, targetDurationMs, targetAmp)
-                        }
-
-                        withContext(Dispatchers.Main) {
-                            if (isVoiceListening) {
-                                binding.progressVoiceLevel.progress = level
-                                binding.labelVoiceInputLevel.text =
-                                    getString(R.string.vibration_voice_input_level, level)
-                                if (level > 8) {
-                                    val point = VibrationGraphView.VibrationPoint(0, 0f, targetAmp.toFloat(), targetDurationMs.toFloat())
-                                    binding.graphView.setPattern(listOf(point), false)
-                                    binding.graphView.setPlaybackProgress(targetDurationMs / 2f)
-                                } else {
-                                    binding.graphView.setPlaybackProgress(-1f)
-                                }
-                            }
-                        }
-                    }
-                    delay(20)
-                }
-            }
-        } catch (e: SecurityException) {
-            stopVoiceListening()
-            Toast.makeText(this, R.string.vibration_voice_permission_denied, Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            stopVoiceListening()
-        }
-    }
-
-    private fun stopVoiceListening() {
-        isVoiceListening = false
-        voiceListeningJob?.cancel()
-        voiceListeningJob = null
-        try {
-            audioRecord?.stop()
-            audioRecord?.release()
-        } catch (_: Exception) {}
-        audioRecord = null
-
-        val colorPrimary = MaterialColors.getColor(binding.root, androidx.appcompat.R.attr.colorPrimary, Color.parseColor("#00BCD4"))
-        val colorOnPrimary = MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorOnPrimary, Color.WHITE)
-        binding.btnVoiceListen.setText(R.string.vibration_voice_start)
-        binding.btnVoiceListen.backgroundTintList = ColorStateList.valueOf(colorPrimary)
-        binding.btnVoiceListen.setTextColor(colorOnPrimary)
-        binding.progressVoiceLevel.progress = 0
-        binding.labelVoiceInputLevel.text = getString(R.string.vibration_voice_input_level, 0)
-        binding.graphView.setPlaybackProgress(-1f)
-    }
-
     private fun animateGraphProgress(durationMs: Long) {
         activePlaybackJob?.cancel()
         setPlaybackUiState(playing = true, looping = false)
@@ -1286,9 +1115,6 @@ class VibrationTestActivity : AppCompatActivity() {
     }
 
     private fun stopAll() {
-        if (isVoiceListening) {
-            stopVoiceListening()
-        }
         activePlaybackJob?.cancel()
         activePlaybackJob = null
         currentActiveWaveform = null
@@ -1305,6 +1131,5 @@ class VibrationTestActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        stopVoiceListening()
     }
 }
